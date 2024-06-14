@@ -1,0 +1,169 @@
+{
+	"name": "LoadRangeHistory",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Range file",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Inboundfiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Inboundfiles').output",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy data1",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BlobSource",
+									"recursive": true
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": "truncate table [Import].[JBDimProductRange]",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "JBHIFIInboundFileZip",
+									"type": "DatasetReference",
+									"parameters": {
+										"filename": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"delimiter": ",",
+										"quotecharacter": "\"",
+										"container": "jbhifi-range-help"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "TableDynamic",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "[Import].[JBDimProductRange]"
+									}
+								}
+							]
+						},
+						{
+							"name": "Load range with history",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Lookup1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[etl].[LoadDimProductRangeWithHistory]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Lookup1",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Copy data1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE import.JBDimProductRange\nSET loadfile = '@{item().name}'; select 1 as a",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Inboundfiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "JBHIFIInbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "jbhifi-range-help"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					]
+				}
+			}
+		],
+		"folder": {
+			"name": "RangeHistory"
+		},
+		"annotations": []
+	}
+}

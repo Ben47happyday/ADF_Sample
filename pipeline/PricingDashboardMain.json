@@ -1,0 +1,396 @@
+{
+	"name": "PricingDashboardMain",
+	"properties": {
+		"activities": [
+			{
+				"name": "Process Start",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[adf].[ADFProcessLogInsert]",
+						"storedProcedureParameters": {
+							"ProcessGUID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"ProcessName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"Status": {
+								"type": "String",
+								"value": "Running"
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check whether to Run pipeline",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Delete Trigger File",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('Process Start').output.firstRow.ProcessLogID,  1)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Market Data Processing",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "MarketData",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusReady": "Ready",
+									"StatusComplete": "Completed",
+									"AdfProcessLogID": {
+										"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Price Change Data Processing",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Refresh MarketData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PriceChangeData",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusReady": "Ready",
+									"StatusComplete": "Completed",
+									"AdfProcessLogID": {
+										"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Refresh MarketData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Market Data Processing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshPricingDashboard",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusReady": "Ready",
+									"StatusComplete": "Completed",
+									"AdfProcessLogID": {
+										"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+										"type": "Expression"
+									},
+									"RefreshProcess": "MarketData"
+								}
+							}
+						},
+						{
+							"name": "Refresh Price Change Data",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Price Change Data Processing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshPricingDashboard",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusReady": "Ready",
+									"StatusComplete": "Completed",
+									"AdfProcessLogID": {
+										"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+										"type": "Expression"
+									},
+									"RefreshProcess": "PriceChangeData"
+								}
+							}
+						},
+						{
+							"name": "Archive Data",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Refresh Price Change Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[etl].[ArchiveData]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Optimize DB",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Archive Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[Maintenance].[Maintenance]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ProcessFinish",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Check whether to Run pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[adf].[adfProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessGUID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Completed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Process Failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Check whether to Run pipeline",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[adf].[adfProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessGUID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Failed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Fail pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Process Failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Delete Trigger File",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Process Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "JBHIFIInboundFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": "PricingDashboardTrigger.zip",
+							"delimiter": "|",
+							"container": "jbhifi-price-dashboard"
+						}
+					},
+					"enableLogging": false
+				}
+			}
+		],
+		"folder": {
+			"name": "PricingDashboard"
+		},
+		"annotations": []
+	}
+}

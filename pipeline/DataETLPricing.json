@@ -1,0 +1,907 @@
+{
+	"name": "DataETLPricing",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete wrong java stage data",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ETL].[deleteIncorrectJavastageData]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Trigger Count",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Delete wrong java stage data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[ETL].[TriggerCountPricing]",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check Trigger",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Trigger Count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(activity('Get Trigger Count').output.firstRow.TriggerCount)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Audit Process Log Insert",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlSource",
+									"sqlReaderStoredProcedureName": "[audit].[ProcessLogInsert]",
+									"storedProcedureParameters": {
+										"ProcessName": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"ProcessRunID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"ProcessTriggerID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().TriggerId",
+												"type": "Expression"
+											}
+										},
+										"Status": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.StatusRunning",
+												"type": "Expression"
+											}
+										},
+										"AdfProcessLogID": {
+											"type": "Int",
+											"value": {
+												"value": "@pipeline().parameters.AdfProcessLogID",
+												"type": "Expression"
+											}
+										}
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Complete",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Refresh JB HIFI Pricing Non Core",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(variables('ProcessLogID'))",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": {
+											"value": "@pipeline().parameters.StatusComplete",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SetVariable",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ProcessLogID",
+								"value": {
+									"value": "@{activity('Audit Process Log Insert').output.firstRow.ProcessLogID}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Audit Process Log Complete",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(variables('ProcessLogID'))",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Fail pipeline",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Failed",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "select 1/0",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Load ReasonCodes",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Reason_Codes",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Promo Location",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "PromoLocation",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Promo Item",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "PromoItem",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Exception Logic",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "ExceptionLogic",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Labour Data",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Labour_Data",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Net Net GP",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Net_Net_GP",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Online Products",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Online_Products",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load KVI List",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "KVI_List",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load CompetitorMatrix",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Competitor_Matrix",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Parent Child",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Parent_Child_List",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load MT Products",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "MT_Products",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load MT Price files",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "MT_Prices",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Wait 10",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "Load ReasonCodes",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Promo Location",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Promo Item",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Exception Logic",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Labour Data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Net Net GP",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Online Products",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load KVI List",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load CompetitorMatrix",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Parent Child",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load MT Products",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load MT Price files",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Promo Master",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Online Pricing",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load YDCompetitorMatrix",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load YD List",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 10
+							}
+						},
+						{
+							"name": "Refresh JB HIFI Pricing Non Core",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Wait 10",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshPricingNonCore",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Promo Master",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "PromoMaster",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Online Pricing",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "Online_Pricing",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load YD List",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "YD_List",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load YDCompetitorMatrix",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IndividualTable",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessName": "YD_Competitor_Matrix",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"AdfProcessLogID": {
+				"type": "int",
+				"defaultValue": -1
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			},
+			"DataLevel1": {
+				"type": "Array",
+				"defaultValue": [
+					"ReasonCodes"
+				]
+			}
+		},
+		"folder": {
+			"name": "Pricing"
+		},
+		"annotations": []
+	}
+}

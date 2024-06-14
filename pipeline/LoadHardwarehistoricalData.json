@@ -1,0 +1,58 @@
+{
+	"name": "LoadHardwarehistoricalData",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy to JBHardwareFact",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "\nSELECT \n       Store,\n       QUANTITY,\n       DATE,\n       SOH,\n       On_Order,\n       Stock_Code,\n       [InvCost(inc)],\n       [Season Code],\n       OnPromo,\n       PromoId,\n       Committed,\n       [Customer Order],\n       [Customer Order Allocated],\n       [In Transit],\n       Department_Id,\n       Classification,\n       ChangeStatus,\n       Range,\n       Min_SOH,\n       [Total Sales Value],\n       [Total Cost],\n       [Total GP$],\n       [Ticket Price],\n       [ELQ Price],\n       [Promo Price],\n       RetailSales,\n       CommercialSales,\n       OnLineSales,\n       RetailTotalSales,\n       RetailTotalCost,\n       [RetailTotalGP$],\n       CommercialTotalSales,\n       CommercialTotalCost,\n       [CommercialTotalGP$],\n       OnlineTotalSales,\n       OnlineTotalCost,\n       [OnlineTotalGP$],\n       Scanback,\n       Rebate,\n       AvgCost,\n       DimProductID,\n       DimSupplierID,\n       DimPromoID,\n       LoadFileID,\n       LoadFile,\n       LoadFileRowID,\n       SaleTransaction,\n       ReOrdQty,\n       TaxRate,\n       Diminishing,\n       MonthEndDate FROM whs.JBFact\nWHERE loadfile LIKE '%Hardware_Delta%'",
+						"queryTimeout": "24:00:00"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "truncate table [whs].[JBHardwareFact]",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"parallelCopies": 32,
+					"dataIntegrationUnits": 4
+				},
+				"inputs": [
+					{
+						"referenceName": "TableDynamicII",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "JBFACT",
+							"schema": "whs"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "whs.JBHardwareFact"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "RangeHistory"
+		},
+		"annotations": []
+	}
+}

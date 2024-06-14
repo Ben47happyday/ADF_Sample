@@ -1,0 +1,44 @@
+{
+	"name": "AzureBlob1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"filename": {
+				"type": "String",
+				"defaultValue": "shouldbeset"
+			},
+			"delimiter": {
+				"type": "string",
+				"defaultValue": "|"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().delimiter",
+					"type": "Expression"
+				},
+				"rowDelimiter": "",
+				"nullValue": "\\N",
+				"treatEmptyAsNull": false,
+				"skipLineCount": 0,
+				"firstRowAsHeader": true
+			},
+			"compression": {
+				"type": "ZipDeflate"
+			},
+			"fileName": {
+				"value": "@dataset().filename",
+				"type": "Expression"
+			},
+			"folderPath": "jbhifi-main"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

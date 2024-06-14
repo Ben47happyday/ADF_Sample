@@ -1,0 +1,108 @@
+{
+	"name": "RefreshAASModel_Parent",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch Refresh Method",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.ModelName",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "JB Vendor",
+							"activities": [
+								{
+									"name": "RefreshExternalAASModel",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "RefreshExternalAASModel",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"Location": {
+												"value": "@pipeline().parameters.ServerRegion",
+												"type": "Expression"
+											},
+											"Model": {
+												"value": "@pipeline().parameters.ModelName",
+												"type": "Expression"
+											},
+											"ServerName": {
+												"value": "@pipeline().parameters.ServerName",
+												"type": "Expression"
+											},
+											"XMLA": {
+												"value": "@pipeline().parameters.XMLA",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "RefreshAASModel",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshAASModel",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"XMLA": {
+										"value": "@pipeline().parameters.XMLA",
+										"type": "Expression"
+									},
+									"ServerName": {
+										"value": "@pipeline().parameters.ServerName",
+										"type": "Expression"
+									},
+									"ModelName": {
+										"value": "@pipeline().parameters.ModelName",
+										"type": "Expression"
+									},
+									"ServerRegion": {
+										"value": "@pipeline().parameters.ServerRegion",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"XMLA": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"ServerRegion": {
+				"type": "string"
+			},
+			"ModelName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "AAS"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,47 @@
+{
+	"name": "JBHIFIInboundFile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"filename": {
+				"type": "String",
+				"defaultValue": "shouldbeset"
+			},
+			"delimiter": {
+				"type": "string",
+				"defaultValue": "|"
+			},
+			"container": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlob",
+		"typeProperties": {
+			"format": {
+				"type": "TextFormat",
+				"columnDelimiter": {
+					"value": "@dataset().delimiter",
+					"type": "Expression"
+				},
+				"rowDelimiter": "",
+				"nullValue": "\\N",
+				"treatEmptyAsNull": false,
+				"skipLineCount": 0,
+				"firstRowAsHeader": false
+			},
+			"fileName": {
+				"value": "@dataset().filename",
+				"type": "Expression"
+			},
+			"folderPath": {
+				"value": "@dataset().container",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

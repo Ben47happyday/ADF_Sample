@@ -1,0 +1,327 @@
+{
+	"name": "FactDelta",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Sales",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Sales",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						},
+						"FileNames": {
+							"value": "@variables('ImportFileNames')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Load to Stock Latest Interim Delta",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "LatestStock",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						},
+						"FileNames": {
+							"value": "@variables('ImportFileNames')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Dates Table Update",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load to Stock Latest Interim Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load To JBInventoryRange",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load to JBPriceHistory",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whs].[Dates]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Timeframe Table Update",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "whsProfit NewDates table Update",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whs].[Timeframes]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Temp Promo Update",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Timeframe Table Update",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whs].[spInsertDistinctPromoToTempPromo]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load to JBPriceHistory",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PriceHistory",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						},
+						"FileNames": {
+							"value": "@variables('ImportFileNames')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Load To JBInventoryRange",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "InventoryRange",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						},
+						"FileNames": {
+							"value": "@variables('ImportFileNames')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Get Import File Names",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT  ISNULL(STRING_AGG(FileName, ', '), '-') AS FileNames\nFROM (\nSELECT distinct e.FileName, e.ID AS FileETLID \n FROM javastage.JBFactImport d \nINNER JOIN audit.FileLoadHistory e ON e.ID = d.loadid\nWHERE e.Status = 'Completed'\n) Z",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set import file names",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Import File Names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ImportFileNames",
+					"value": {
+						"value": "@{activity('Get Import File Names').output.firstRow.FileNames}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "whsProfit NewDates table Update",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Dates Table Update",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whsProfit].[NewDates]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"ProcessLogID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ImportFileNames": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,204 @@
+{
+	"name": "DeleteDynamicPartition",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get partition to be deleted",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT ModelName, TableName, PartitionType, PartitionName\nFROM models.DynamicPartition\nWHERE ModelName = '@{pipeline().parameters.modelName}'\nAND TableName = '@{pipeline().parameters.tableName}'\nAND PartitionType = '@{pipeline().parameters.PartitionType}'\nAND DeleteFlag = 1",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get partition to be deleted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get partition to be deleted').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Get XMLA Command",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[models].[sp__GetXMLADeletePartitionCommand]",
+									"storedProcedureParameters": {
+										"modelName": {
+											"type": "String",
+											"value": {
+												"value": "@item().ModelName",
+												"type": "Expression"
+											}
+										},
+										"PartitionName": {
+											"type": "String",
+											"value": {
+												"value": "@item().PartitionName",
+												"type": "Expression"
+											}
+										},
+										"PartitionType": {
+											"type": "String",
+											"value": {
+												"value": "@item().PartitionType",
+												"type": "Expression"
+											}
+										},
+										"tableName": {
+											"type": "String",
+											"value": {
+												"value": "@item().TableName",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Delete AAS model partition",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Get XMLA Command",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshAASModel_Parent",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"XMLA": {
+										"value": "@activity('Get XMLA Command').output.firstRow.XMLA",
+										"type": "Expression"
+									},
+									"ServerName": {
+										"value": "@activity('Get XMLA Command').output.firstRow.ServerName",
+										"type": "Expression"
+									},
+									"ServerRegion": {
+										"value": "@activity('Get XMLA Command').output.firstRow.ServerRegion",
+										"type": "Expression"
+									},
+									"ModelName": {
+										"value": "@activity('Get XMLA Command').output.firstRow.ModelName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Clean up delete flag",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Delete AAS model partition",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE models.DynamicPartition\nSET DeleteFlag = 0\nWHERE ModelName = '@{item().ModelName}'\nAND TableName = '@{item().TableName}'\nAND PartitionType = '@{item().PartitionType}'\nAND PartitionName = '@{item().PartitionName}'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"modelName": {
+				"type": "string",
+				"defaultValue": "JB HiFi Tabular"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "FactInventoryHistory"
+			},
+			"PartitionType": {
+				"type": "string",
+				"defaultValue": "Monthly"
+			}
+		},
+		"folder": {
+			"name": "AAS"
+		},
+		"annotations": []
+	}
+}

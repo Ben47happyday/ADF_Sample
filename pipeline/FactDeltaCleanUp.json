@@ -1,0 +1,483 @@
+{
+	"name": "FactDeltaCleanUp",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load JBFact",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Delete overlapping JB Fact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "JBFact",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						},
+						"FileNames": {
+							"value": "@variables('ImportFileNames')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Delete overlapping JB Fact",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveDuplicateJBFact]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Stock Latest Update",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Remove Outdated Stock 1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 3",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 4",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 5",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 6",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 7",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 8",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Remove Outdated Stock 9",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[spJBStockLatestUpdate]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Delete import stage data",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Stock Latest Update",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load JBFact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[StageDeleteFactImport]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Import File Names",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT  ISNULL(STRING_AGG(FileName, ', '), '-') AS FileNames\nFROM (\nSELECT distinct e.FileName, e.ID AS FileETLID \n FROM javastage.JBFactImport d \nINNER JOIN audit.FileLoadHistory e ON e.ID = d.loadid\nWHERE e.Status = 'Completed'\n) Z",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set import file names",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Import File Names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ImportFileNames",
+					"value": {
+						"value": "@{activity('Get Import File Names').output.firstRow.FileNames}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 1",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest1]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 2",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest2]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 3",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest3]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 4",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest4]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 5",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest5]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 6",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest6]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 7",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest7]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 8",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest8]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Remove Outdated Stock 9",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set import file names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[RemoveOutdatedStockLatest9]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"ProcessLogID": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ImportFileNames": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

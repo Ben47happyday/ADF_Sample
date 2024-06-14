@@ -1,0 +1,37 @@
+{
+	"name": "Schedule Month Start",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "LoadRebatesDataDirectLoad",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Month",
+				"interval": 1,
+				"startTime": "2023-12-27T23:39:00",
+				"timeZone": "AUS Eastern Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						16
+					],
+					"monthDays": [
+						2,
+						3,
+						4
+					]
+				}
+			}
+		}
+	}
+}

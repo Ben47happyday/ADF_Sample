@@ -1,0 +1,57 @@
+{
+	"name": "RebateFactSink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "JBHIFI",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ProductCode",
+				"type": "varchar"
+			},
+			{
+				"name": "MovedAt",
+				"type": "date"
+			},
+			{
+				"name": "LocationNumber",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "CategoryId",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "SubcategoryId",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "AmountTaxExcluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 6
+			},
+			{
+				"name": "AmountTaxIncluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 6
+			},
+			{
+				"name": "SaleChannel",
+				"type": "smallint",
+				"precision": 5
+			}
+		],
+		"typeProperties": {
+			"schema": "whsProfit",
+			"table": "ProfitRebates"
+		}
+	}
+}

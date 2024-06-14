@@ -1,0 +1,297 @@
+{
+	"name": "MarketData",
+	"properties": {
+		"activities": [
+			{
+				"name": "Audit Refresh Model Start",
+				"description": "Initial a process main and get a process log id",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[audit].[ProcessLogInsert]",
+						"storedProcedureParameters": {
+							"ProcessName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"ProcessRunID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"ProcessTriggerID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().TriggerId",
+									"type": "Expression"
+								}
+							},
+							"Status": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.StatusRunning",
+									"type": "Expression"
+								}
+							},
+							"AdfProcessLogID": {
+								"type": "Int",
+								"value": {
+									"value": "@pipeline().parameters.AdfProcessLogID",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set Process Log ID",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Audit Refresh Model Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ProcessLogID",
+					"value": {
+						"value": "@{activity('Audit Refresh Model Start').output.firstRow.ProcessLogID}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Audit Log Finished",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Daily Provider Data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[ProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(variables('ProcessLogID'))",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": {
+								"value": "@pipeline().parameters.StatusComplete",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Audit Log Failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Audit Log Finished",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					},
+					{
+						"activity": "Audit Refresh Model Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[ProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@{activity('Audit Refresh Model Start').output.firstRow.ProcessLogID}",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Failed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Fail the pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Audit Log Failed",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Update latest online pricing",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set Process Log ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whsPricingDashboard].[UpdateLatestOnlinePriceInfo]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Daily Provider Data",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Update latest online pricing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[LoadDailyProviderProductPrice]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(variables('ProcessLogID'))",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusReady": {
+				"type": "string",
+				"defaultValue": "Ready"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"AdfProcessLogID": {
+				"type": "string",
+				"defaultValue": "-1"
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "PricingDashboard"
+		},
+		"annotations": []
+	}
+}

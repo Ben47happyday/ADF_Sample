@@ -1,0 +1,721 @@
+{
+	"name": "LoadRebatesDataDirectLoad_Delta",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Rebates Profitability to Staging",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Rolling Days",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 6,
+					"retryIntervalInSeconds": 900,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@replace('SELECT * \n          FROM dbo.DailyRebatesProfitabilityBySubcategoryJBAU \n        WHERE [MovedAt] >= DATEADD(day, -RollingDays, GETUTCDATE())', 'RollingDays', variables('RollingDays'))",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"isolationLevel": "ReadUncommitted",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE \tadf.[DailyRebatesProfitabilityBySubcategoryJBAU]",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "ProductCode",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ProductCode",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "MovedAt",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "MovedAt",
+									"type": "DateTime",
+									"physicalType": "date"
+								}
+							},
+							{
+								"source": {
+									"name": "LocationNumber",
+									"physicalType": "smallint",
+									"precision": 5
+								},
+								"sink": {
+									"name": "LocationNumber",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "CategoryId",
+									"physicalType": "smallint",
+									"precision": 5
+								},
+								"sink": {
+									"name": "CategoryId",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "SubcategoryId",
+									"physicalType": "smallint",
+									"precision": 5
+								},
+								"sink": {
+									"name": "SubcategoryId",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "AmountTaxExcluded",
+									"physicalType": "decimal",
+									"scale": 6,
+									"precision": 38
+								},
+								"sink": {
+									"name": "AmountTaxExcluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 6,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "AmountTaxIncluded",
+									"physicalType": "decimal",
+									"scale": 6,
+									"precision": 38
+								},
+								"sink": {
+									"name": "AmountTaxIncluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 7,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "SaleChannel",
+									"physicalType": "smallint",
+									"precision": 5
+								},
+								"sink": {
+									"name": "SaleChannel",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "RebateDB",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "StagingDailyRebatesProfitability",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Set Rolling Days",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RollingDays",
+					"value": "180"
+				}
+			},
+			{
+				"name": "Load Sales Profitability to Staging",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Rolling Days",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 6,
+					"retryIntervalInSeconds": 900,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"additionalColumns": [
+							{
+								"name": "VnetLoadDate",
+								"value": {
+									"value": "@convertFromUtc(utcnow(),'AUS Eastern Standard Time')",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "@replace('SELECT * \n          FROM dbo.DailySalesProfitabilityJBAU \n        WHERE [MovedAt] >= DATEADD(day, -RollingDays, GETUTCDATE())', 'RollingDays', variables('RollingDays'))",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE \t[adf].[DailySalesProfitabilityJBAU]",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "ProductCode",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "ProductCode",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "MovedAt",
+									"type": "DateTime",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "MovedAt",
+									"type": "DateTime",
+									"physicalType": "date"
+								}
+							},
+							{
+								"source": {
+									"name": "Quantity",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 4,
+									"precision": 38
+								},
+								"sink": {
+									"name": "Quantity",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 4,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "SalesTaxExcluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 8,
+									"precision": 38
+								},
+								"sink": {
+									"name": "SalesTaxExcluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 8,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "SalesTaxIncluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 8,
+									"precision": 38
+								},
+								"sink": {
+									"name": "SalesTaxIncluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 9,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "CostTaxExcluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 8,
+									"precision": 38
+								},
+								"sink": {
+									"name": "CostTaxExcluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 8,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "CostTaxIncluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 6,
+									"precision": 38
+								},
+								"sink": {
+									"name": "CostTaxIncluded",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 9,
+									"precision": 38
+								}
+							},
+							{
+								"source": {
+									"name": "LocationNumber",
+									"type": "Int16",
+									"physicalType": "smallint"
+								},
+								"sink": {
+									"name": "LocationNumber",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "SaleChannel",
+									"type": "Int16",
+									"physicalType": "smallint"
+								},
+								"sink": {
+									"name": "SaleChannel",
+									"type": "Int16",
+									"physicalType": "smallint"
+								}
+							},
+							{
+								"source": {
+									"name": "DepartmentNumber",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "DepartmentNumber",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "ProductGroupNumber",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "ProductGroupNumber",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "Season",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Season",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "Brand",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "Brand",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "RebateDB",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "StagingDailySalesProfitability",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Insert to Rebates Profitability Target",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Rebates Profitability to Staging",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whsProfit].[sp__LoadtoRebatesProfitabilityPartition]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Insert to Sales Profitability Target",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Sales Profitability to Staging",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whsProfit].[sp__LoadtoSalesProfitability]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load to WHS",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Insert to Rebates Profitability Target",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Insert to Sales Profitability Target",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whsProfit].[LoadJBProfitNew]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Refresh Season Code",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load to WHS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whs].[usp_UpdateProductSeasonCode]",
+					"storedProcedureParameters": {
+						"OnlyDelta": {
+							"value": "1",
+							"type": "Byte[]"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Refresh Buyer Model Rebates Partition",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Refresh Season Code",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n    \"type\": \"full\",\n    \"objects\": [\n      {\n        \"database\": \"JB HiFi Tabular\",\n        \"table\": \"RebatesFact\",\n        \"partition\": \"DailyStoreItemRebates\"\n      }\n    ]\n}",
+						"ServerName": "jbinsightsaas01",
+						"ModelName": "JB HiFi Tabular",
+						"ServerRegion": "australiasoutheast"
+					}
+				}
+			},
+			{
+				"name": "TriggerDeptReport",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Refresh Buyer Model Rebates Partition",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "TriggerDeptReport",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Drop a File When Received Trigger",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Rolling Days",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BlobSource",
+						"recursive": true
+					},
+					"sink": {
+						"type": "BlobSink"
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "JBHIFIInboundFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": "FlagSource\\triggerStatus.txt",
+							"delimiter": ",",
+							"container": "rebates-flag"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "JBHIFIInboundFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": "triggerStatus.txt",
+							"delimiter": ",",
+							"container": "rebates-flag"
+						}
+					}
+				]
+			},
+			{
+				"name": "Refresh Vendor Rebates",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Refresh Season Code",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n\"type\": \"full\",\n\"objects\": [\n\t{\n\t\"database\": \"JB Vendor\",\n\t\"table\": \"RebatesFact\",\n\t\"partition\": \"DailyStoreItemRebates\"\n\t}\n\t]\n}\n}",
+						"ServerName": "apacjjbgaas01",
+						"ServerRegion": "australiasoutheast",
+						"ModelName": "JB Vendor"
+					}
+				}
+			},
+			{
+				"name": "Refresh Rebates Model",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Refresh Season Code",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n  \"type\": \"full\",\n  \"RetryCount\": 1,\n  \"objects\": [\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Category\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"partition\": \"vwDailyRebatesProfitabilityBySubcategory\",\n      \"table\": \"DailyRebates\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"partition\": \"vwDailySalesProfitabilityJBAU\",\n      \"table\": \"DailySales\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Department\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"ProductGroup\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"ProductsAll\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Subcategory\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"_Measures\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Product\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"DatesReport\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"TimeframeParameters\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Dates\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"DatesCustom\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Timeframes\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Timeperiods\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"CalculationTypes\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Rebates Show As\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"ProductHierachy\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"Channel\"\n    },\n    {\n      \"database\": \"JB Rebates\",\n      \"table\": \"DateTimeFrame\"\n    }\n  ]\n}",
+						"ServerName": "jbinsightsaas01",
+						"ModelName": "JB Rebates",
+						"ServerRegion": "australiasoutheast"
+					}
+				}
+			}
+		],
+		"variables": {
+			"RollingDays": {
+				"type": "String",
+				"defaultValue": "7"
+			}
+		},
+		"folder": {
+			"name": "Rebates"
+		},
+		"annotations": []
+	}
+}

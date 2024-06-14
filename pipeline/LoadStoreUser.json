@@ -1,0 +1,136 @@
+{
+	"name": "LoadStoreUser",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Jb user  Data to Stage",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 3,
+					"retryIntervalInSeconds": 900,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": "SELECT EMAIL , \"LOCATION\" , AREA_MANAGER_EMAIL, SUPER_USER  FROM SHARE_VNET.SHARE_VNET.V_ANZ_JB_USERPROFILES",
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBatchSize": 0,
+						"preCopyScript": "EXEC [whs].[TruncateStagingStoreuser]",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "SnowflakeBlobStaging",
+							"type": "LinkedServiceReference"
+						},
+						"path": "jbhifi-snowflake/Inbound"
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "EMAIL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "email",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LOCATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "location",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "AREA_MANAGER_EMAIL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "area_manager_email",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SUPER_USER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "Super_User",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "JBSnowflake",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "adf.StoreAreaManagerAccess"
+						}
+					}
+				]
+			},
+			{
+				"name": "Load StoreAccessUserData",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Jb user  Data to Stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[whs].[loadstoreAceesUserdata]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

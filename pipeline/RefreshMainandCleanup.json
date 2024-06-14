@@ -1,0 +1,88 @@
+{
+	"name": "RefreshMainandCleanup",
+	"properties": {
+		"activities": [
+			{
+				"name": "Cleanup",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "FactDeltaCleanUp",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed",
+						"ProcessLogID": {
+							"value": "@int(pipeline().parameters.ProcessLogID)",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "RefreshModel",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Cleanup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshModel",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"StatusRunning": "Running",
+						"StatusReady": "Ready",
+						"StatusComplete": "Completed",
+						"AdfProcessLogID": {
+							"value": "@pipeline().parameters.AdfProcessLogID",
+							"type": "Expression"
+						},
+						"RefreshProcess": "MainCore",
+						"Models": "( 'JB HiFi Vendor Tabular', 'JB HiFi Pricing', 'JB HiFi Tabular')"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"ProcessLogID": {
+				"type": "string"
+			},
+			"AdfProcessLogID": {
+				"type": "int"
+			},
+			"ProcessName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

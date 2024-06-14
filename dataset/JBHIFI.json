@@ -1,0 +1,12 @@
+{
+	"name": "JBHIFI",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "JBHIFI",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

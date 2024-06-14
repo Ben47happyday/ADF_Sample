@@ -1,0 +1,24 @@
+{
+	"name": "SnowFlakeInbound",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SnowflakeBlobStaging",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "test.csv",
+				"folderPath": "inbound",
+				"container": "jbhifi-snowflake"
+			},
+			"columnDelimiter": "|",
+			"rowDelimiter": "\r\n",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

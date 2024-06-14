@@ -1,0 +1,16 @@
+{
+	"name": "JBUserProfile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "JBUserProfile",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SparkObject",
+		"schema": [],
+		"typeProperties": {
+			"schema": "composite",
+			"table": "vw_anz_jb_userprofiles"
+		}
+	}
+}

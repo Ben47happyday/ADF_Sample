@@ -1,0 +1,99 @@
+{
+	"name": "LoadForecastItemConsenses",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Forecast Data From Inventory",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"additionalColumns": [
+							{
+								"name": "LoadDateUTC",
+								"value": {
+									"value": "@utcNow()",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": "SELECT frcdi_weekStarting\n\t, frcdi_sKU\n\t, frcdi_sellThroughFCSTConsensus\n\t, frcdi_finalCommitment\n\t, frcdi_actualSellThrough_commercial\n\t, frcdi_actualSellThrough_retail\n\t, frcdi_SOH\nFROM jbhardware.ForecastDetailItem\n",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "truncate table adf.JBForecast",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "VNetJBHardwareRange",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "adf.JBForecast"
+						}
+					}
+				]
+			},
+			{
+				"name": "Load Data To Target Table",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Get Forecast Data From Inventory",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[JBForecast]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"folder": {
+			"name": "Forecast"
+		},
+		"annotations": []
+	}
+}

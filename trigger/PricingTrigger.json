@@ -1,0 +1,25 @@
+{
+	"name": "PricingTrigger",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PricingMain",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/jbhifi-pricing/blobs/PricingTrigger.",
+			"blobPathEndsWith": "zip",
+			"ignoreEmptyBlobs": false,
+			"scope": "/subscriptions/7ab5690e-23de-4d6c-970f-e7b9e8658655/resourceGroups/jb-insights-prod/providers/Microsoft.Storage/storageAccounts/jbinsightsstorage",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}

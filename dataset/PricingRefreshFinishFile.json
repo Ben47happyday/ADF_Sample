@@ -1,0 +1,30 @@
+{
+	"name": "PricingRefreshFinishFile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"ProcessLogID": {
+				"type": "int"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat(string(dataset().ProcessLogID), '.log')",
+					"type": "Expression"
+				},
+				"container": "jbhifi-pricing-refresh"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

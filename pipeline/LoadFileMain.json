@@ -1,0 +1,663 @@
+{
+	"name": "LoadFileMain",
+	"properties": {
+		"activities": [
+			{
+				"name": "StoreSupplementaryFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 6)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "HardWare Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 22)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "StoreSpaceFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 2)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "StoreFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 1)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GenreRangeFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 3)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "StoreSupplementary Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "StoreSupplementaryFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('StoreSupplementaryFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "HardWare Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "HardWare Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('HardWare Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Store Space Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "StoreSpaceFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('StoreSpaceFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Store Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "StoreFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('StoreFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Genre Range Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GenreRangeFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('GenreRangeFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "ProductRangeFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 4)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Product Range Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ProductRangeFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('ProductRangeFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "JBBudgetFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 5)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "JB Budget Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "JBBudgetFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('JBBudgetFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Wait",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "StoreSupplementary Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "HardWare Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Store Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Store Space Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Genre Range Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Product Range Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "JB Budget Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Movie Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Music Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "ZeroMove Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Transactions Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GMData Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 10
+				}
+			},
+			{
+				"name": "Fail Pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Wait",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Music Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 24)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Music Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Music Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Music Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Movie Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 23)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Movie Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Movie Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Movie Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "ZeroMove Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ZeroMovement Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('ZeroMovement Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "ZeroMovement Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 27)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Transactions Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 28)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Transactions Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Transactions Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Transactions Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "GMData Delta",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 31)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GMData Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "GMData Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('GMData Delta').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"FIles": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

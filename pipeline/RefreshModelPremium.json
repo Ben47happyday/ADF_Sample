@@ -1,0 +1,253 @@
+{
+	"name": "RefreshModelPremium",
+	"properties": {
+		"activities": [
+			{
+				"name": "For each model",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Models to Refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Models to Refresh').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 2,
+					"activities": [
+						{
+							"name": "Failed - Clear the update partition flag",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "RefreshAASModel_Parent",
+									"dependencyConditions": [
+										"Failed",
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[UpdatePartitionRefreshCompleteInv]",
+								"storedProcedureParameters": {
+									"modelName": {
+										"value": {
+											"value": "@item().ModelName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Model Refresh Failed",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "Failed - Clear the update partition flag",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Model Refresh Failed",
+								"errorCode": "403"
+							}
+						},
+						{
+							"name": "Create XMLA Command",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[models].[sp__RefreshTabularPartitionsInv]",
+									"storedProcedureParameters": {
+										"TabularModelName": {
+											"type": "String",
+											"value": {
+												"value": "@item().ModelName",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "RefreshAASModel_Parent",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Create XMLA Command",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshAASModel_Parent",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"XMLA": {
+										"value": "@activity('Create XMLA Command').output.firstRow.XMLA",
+										"type": "Expression"
+									},
+									"ServerName": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ServerName",
+										"type": "Expression"
+									},
+									"ServerRegion": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ServerRegion",
+										"type": "Expression"
+									},
+									"ModelName": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ModelName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Completed - Clear the update partition flag_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "RefreshAASModel_Parent",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[UpdatePartitionRefreshCompleteInv]",
+								"storedProcedureParameters": {
+									"modelName": {
+										"value": {
+											"value": "@item().ModelName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Models to Refresh",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Partition for Refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT ModelName, TabularInstance\nFROM [models].[vwTabularModelsToRefreshInv]",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set Partition for Refresh",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[models].[UpdateMonthPartitionsInv]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

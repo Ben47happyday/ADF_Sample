@@ -1,0 +1,27 @@
+{
+	"name": "VNetJBHardwareRangeFile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat('AUSJO_CMI_Range_Hardware_',convertFromUtc(utcnow(),'AUS Eastern Standard Time'),'.zip')",
+					"type": "Expression"
+				},
+				"container": "jbhifi-main"
+			},
+			"columnDelimiter": ",",
+			"compressionCodec": "ZipDeflate",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

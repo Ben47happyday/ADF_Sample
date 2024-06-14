@@ -1,0 +1,83 @@
+{
+	"name": "RebateSalesFactSource",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "JBRebatesPROD",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ProductCode",
+				"type": "varchar"
+			},
+			{
+				"name": "MovedAt",
+				"type": "date"
+			},
+			{
+				"name": "Quantity",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 4
+			},
+			{
+				"name": "SalesTaxExcluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 8
+			},
+			{
+				"name": "SalesTaxIncluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 8
+			},
+			{
+				"name": "CostTaxExcluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 8
+			},
+			{
+				"name": "CostTaxIncluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 6
+			},
+			{
+				"name": "LocationNumber",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "SaleChannel",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "DepartmentNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "ProductGroupNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Season",
+				"type": "varchar"
+			},
+			{
+				"name": "Brand",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "DailySalesProfitabilityJBAU"
+		}
+	}
+}

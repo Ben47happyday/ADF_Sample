@@ -1,0 +1,19 @@
+{
+	"name": "RebatesUAT",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=jbg-all-rebates-sql-prod.database.windows.net;Initial Catalog=Rebates;User ID=vnet",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "vnet_jb_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "REBATESUAT"
+			}
+		}
+	}
+}

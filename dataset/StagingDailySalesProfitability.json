@@ -1,0 +1,97 @@
+{
+	"name": "StagingDailySalesProfitability",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "JBHIFI",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "JB Rebates Dist Staging"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "DailySalesProfitabilityJBAUID",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "ProductCode",
+				"type": "varchar"
+			},
+			{
+				"name": "MovedAt",
+				"type": "date"
+			},
+			{
+				"name": "Quantity",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 4
+			},
+			{
+				"name": "SalesTaxExcluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 8
+			},
+			{
+				"name": "SalesTaxIncluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 9
+			},
+			{
+				"name": "CostTaxExcluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 8
+			},
+			{
+				"name": "CostTaxIncluded",
+				"type": "decimal",
+				"precision": 38,
+				"scale": 9
+			},
+			{
+				"name": "LocationNumber",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "SaleChannel",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "DepartmentNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "ProductGroupNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Season",
+				"type": "varchar"
+			},
+			{
+				"name": "Brand",
+				"type": "varchar"
+			},
+			{
+				"name": "VnetLoadDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "adf",
+			"table": "DailySalesProfitabilityJBAU"
+		}
+	}
+}

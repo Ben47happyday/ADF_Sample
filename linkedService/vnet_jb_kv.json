@@ -1,0 +1,10 @@
+{
+	"name": "vnet_jb_kv",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://vnet-jb-kv.vault.azure.net/"
+		}
+	}
+}

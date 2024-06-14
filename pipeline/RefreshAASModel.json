@@ -1,0 +1,808 @@
+{
+	"name": "RefreshAASModel",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Refresh Status",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Get Refresh ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Create Log",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('IsRefreshComepleted'), true)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get Model Refresh Status",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "03:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',pipeline().parameters.ServerRegion,'.asazure.windows.net/servers/',pipeline().parameters.ServerName,'/models/',pipeline().parameters.ModelName,'/refreshes/',variables('RefreshID')  )",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"body": {
+									"value": "@pipeline().parameters.XMLA",
+									"type": "Expression"
+								},
+								"disableCertValidation": false,
+								"httpRequestTimeout": "00:05:00",
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://*.asazure.windows.net"
+								}
+							}
+						},
+						{
+							"name": "Set Refresh Status",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Model Refresh Status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "RefreshStatus",
+								"value": {
+									"value": "@activity('Get Model Refresh Status').output.status",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Status Condition",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Set Refresh Status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@variables('RefreshStatus')",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "inProgress",
+										"activities": [
+											{
+												"name": "Wait 60 sec when InProgress",
+												"type": "Wait",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"waitTimeInSeconds": 60
+												}
+											}
+										]
+									},
+									{
+										"value": "succeeded",
+										"activities": [
+											{
+												"name": "Refresh is Done",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "IsRefreshComepleted",
+													"value": true
+												}
+											},
+											{
+												"name": "Update Refresh Log to Complete",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[Audit].[sp__UpdateModelRefreshLog]",
+													"storedProcedureParameters": {
+														"RefreshID": {
+															"value": {
+																"value": "@activity('Refresh Model').output.operationId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"Status": {
+															"value": "Completed",
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "JBHIFI",
+													"type": "LinkedServiceReference"
+												}
+											}
+										]
+									},
+									{
+										"value": "failed",
+										"activities": [
+											{
+												"name": "Get Error Msg",
+												"type": "SetVariable",
+												"dependsOn": [],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "ErrorMsg",
+													"value": {
+														"value": "@activity('Get Model Refresh Status').output.messages[0].message",
+														"type": "Expression"
+													}
+												}
+											},
+											{
+												"name": "Refresh Failed",
+												"type": "SetVariable",
+												"dependsOn": [
+													{
+														"activity": "Get Error Msg",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "IsRefreshComepleted",
+													"value": true
+												}
+											},
+											{
+												"name": "model Refresh Failed",
+												"type": "Fail",
+												"dependsOn": [
+													{
+														"activity": "Get Error Msg",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"message": {
+														"value": "@variables('ErrorMsg')",
+														"type": "Expression"
+													},
+													"errorCode": "400"
+												}
+											},
+											{
+												"name": "Stored procedure1",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "Get Error Msg",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[Audit].[sp__UpdateModelRefreshLog]",
+													"storedProcedureParameters": {
+														"RefreshID": {
+															"value": {
+																"value": "@activity('Refresh Model').output.operationId",
+																"type": "Expression"
+															},
+															"type": "String"
+														},
+														"Status": {
+															"value": "Failed",
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "JBHIFI",
+													"type": "LinkedServiceReference"
+												}
+											}
+										]
+									},
+									{
+										"value": "notStarted",
+										"activities": [
+											{
+												"name": "Wait 60 sec when notStarted",
+												"type": "Wait",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"waitTimeInSeconds": 1
+												}
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "Refresh is Terminated",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "IsRefreshComepleted",
+											"value": true
+										}
+									},
+									{
+										"name": "Update Log for Failure when Unknown Status",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "Refresh is Terminated",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[Audit].[sp__UpdateModelRefreshLog]",
+											"storedProcedureParameters": {
+												"RefreshID": {
+													"value": {
+														"value": "@activity('Refresh Model').output.operationId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"Status": {
+													"value": "Failed",
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "JBHIFI",
+											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "model Refresh Failed if unknown Status",
+										"type": "Fail",
+										"dependsOn": [
+											{
+												"activity": "Refresh is Terminated",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"message": {
+												"value": "model failed with unknown status",
+												"type": "Expression"
+											},
+											"errorCode": "400"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Unable Fetch Refresh Status",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Model Refresh Status",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "IsRefreshComepleted",
+								"value": true
+							}
+						},
+						{
+							"name": "Update Log for Failure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Unable Fetch Refresh Status",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[Audit].[sp__UpdateModelRefreshLog]",
+								"storedProcedureParameters": {
+									"RefreshID": {
+										"value": {
+											"value": "@activity('Refresh Model').output.operationId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": "Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Model Refresh failed in check status",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "Update Log for Failure",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Unable Fetch Refresh Status",
+								"errorCode": "404 "
+							}
+						}
+					],
+					"timeout": "03:00:00"
+				}
+			},
+			{
+				"name": "Get Refresh ID",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Refresh Model",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RefreshID",
+					"value": {
+						"value": "@activity('Refresh Model').output.operationId",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Refresh Model",
+				"description": "refresh analysis model",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Queue in Refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "02:00:00",
+					"retry": 5,
+					"retryIntervalInSeconds": 600,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat('https://',pipeline().parameters.ServerRegion,'.asazure.windows.net/servers/',pipeline().parameters.ServerName,'/models/',pipeline().parameters.ModelName,'/refreshes' )",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@pipeline().parameters.XMLA",
+						"type": "Expression"
+					},
+					"disableCertValidation": false,
+					"httpRequestTimeout": "00:05:00",
+					"turnOffAsync": true,
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://*.asazure.windows.net"
+					}
+				}
+			},
+			{
+				"name": "Queue in Refresh",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('IsinProcess'), 'false')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get All Current Status",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "03:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat('https://',pipeline().parameters.ServerRegion,'.asazure.windows.net/servers/',pipeline().parameters.ServerName,'/models/',pipeline().parameters.ModelName,'/refreshes' )",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"body": {
+									"value": "@pipeline().parameters.XMLA",
+									"type": "Expression"
+								},
+								"disableCertValidation": false,
+								"httpRequestTimeout": "00:05:00",
+								"turnOffAsync": true,
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://*.asazure.windows.net"
+								}
+							}
+						},
+						{
+							"name": "Response",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get All Current Status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Response",
+								"value": {
+									"value": "@string(activity('Get All Current Status').output.Response)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If exists inProgress",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Response",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greaterOrEquals(indexOf(variables('Response'),'inProgress') , 0 ) ",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Good to go",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "IsinProcess",
+											"value": "false"
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Wait for 60 sec",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 60
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "unable fetch running progress",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get All Current Status",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "IsinProcess",
+								"value": "false"
+							}
+						}
+					],
+					"timeout": "02:00:00"
+				}
+			},
+			{
+				"name": "Create Log",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Refresh Model",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Audit].[sp__InsertModelRefreshLog]",
+					"storedProcedureParameters": {
+						"ModelName": {
+							"value": {
+								"value": "@pipeline().parameters.ModelName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RefreshID": {
+							"value": {
+								"value": "@activity('Refresh Model').output.operationId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ServerName": {
+							"value": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ServerRegion": {
+							"value": {
+								"value": "@pipeline().parameters.ServerRegion",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"XMLA": {
+							"value": {
+								"value": "@string(pipeline().parameters.XMLA)",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Update log with Failure 1",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Check Refresh Status",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Audit].[sp__UpdateModelRefreshLog]",
+					"storedProcedureParameters": {
+						"RefreshID": {
+							"value": {
+								"value": "@activity('Refresh Model').output.operationId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Status": {
+							"value": "Failed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Model Refresh Failed 1",
+				"type": "Fail",
+				"dependsOn": [
+					{
+						"activity": "Update log with Failure 1",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"message": "Model Refresh Failed",
+					"errorCode": "200"
+				}
+			}
+		],
+		"parameters": {
+			"XMLA": {
+				"type": "String"
+			},
+			"ServerName": {
+				"type": "String"
+			},
+			"ModelName": {
+				"type": "String"
+			},
+			"ServerRegion": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"IsRefreshComepleted": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"RefreshID": {
+				"type": "String"
+			},
+			"RefreshStatus": {
+				"type": "String"
+			},
+			"ErrorMsg": {
+				"type": "String"
+			},
+			"IsinProcess": {
+				"type": "String",
+				"defaultValue": "true"
+			},
+			"Response": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "AAS"
+		},
+		"annotations": []
+	}
+}

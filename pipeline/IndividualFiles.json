@@ -1,0 +1,460 @@
+{
+	"name": "IndividualFiles",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.item",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Pre Load",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Audit Load Start",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@item().PreProcessSP",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Audit Load Start",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlSource",
+									"sqlReaderStoredProcedureName": "[audit].[FileLoadHistoryInsert]",
+									"storedProcedureParameters": {
+										"FileName": {
+											"type": "String",
+											"value": {
+												"value": "@item().FileName",
+												"type": "Expression"
+											}
+										},
+										"FilesToLoadID": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().FilesToLoadID",
+												"type": "Expression"
+											}
+										},
+										"ProcessLogID": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().ProcessLogID",
+												"type": "Expression"
+											}
+										},
+										"SourceFilesControlID": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().SourceFilesControlID",
+												"type": "Expression"
+											}
+										},
+										"Status": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.StatusRunning",
+												"type": "Expression"
+											}
+										}
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "ZipOrNot",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Pre Load",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@bool(item().IsZip)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Copy2",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "BlobSource",
+												"recursive": false
+											},
+											"sink": {
+												"type": "SqlSink",
+												"writeBatchSize": 10000
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "JBHIFIInboundFile",
+												"type": "DatasetReference",
+												"parameters": {
+													"filename": {
+														"value": "@item().FileName",
+														"type": "Expression"
+													},
+													"delimiter": {
+														"value": "@item().delimiter",
+														"type": "Expression"
+													},
+													"container": {
+														"value": "@item().Folder",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "TableDynamic",
+												"type": "DatasetReference",
+												"parameters": {
+													"tableName": {
+														"value": "@item().TargetTable",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Copy1",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "BlobSource",
+												"recursive": false
+											},
+											"sink": {
+												"type": "SqlSink",
+												"writeBatchSize": 10000
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "JBHIFIInboundFileZip",
+												"type": "DatasetReference",
+												"parameters": {
+													"filename": {
+														"value": "@item().FileName",
+														"type": "Expression"
+													},
+													"delimiter": {
+														"value": "@item().delimiter",
+														"type": "Expression"
+													},
+													"quotecharacter": "\"",
+													"container": {
+														"value": "@item().Folder",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "TableDynamic",
+												"type": "DatasetReference",
+												"parameters": {
+													"tableName": {
+														"value": "@item().TargetTable",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "Audit Load Complete",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Post Load",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[FileLoadHistoryUpdate]",
+								"storedProcedureParameters": {
+									"ID": {
+										"value": {
+											"value": "@activity('Audit Load Start').output.firstRow.id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": {
+											"value": "@pipeline().parameters.StatusComplete",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Post Load",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "ZipOrNot",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@item().PostProcessSP",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"LoadID": {
+										"value": {
+											"value": "@activity('Audit Load Start').output.firstRow.id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Delete1",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Audit Load Complete",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "JBHIFIInboundFile",
+									"type": "DatasetReference",
+									"parameters": {
+										"filename": {
+											"value": "@item().FileName",
+											"type": "Expression"
+										},
+										"delimiter": "|",
+										"container": {
+											"value": "@item().Folder",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false
+							}
+						},
+						{
+							"name": "Audit Load Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Audit Load Start",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Audit Load Complete",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[FileLoadHistoryUpdate]",
+								"storedProcedureParameters": {
+									"ID": {
+										"value": {
+											"value": "@activity('Audit Load Start').output.firstRow.id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Failed Pipeline",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Audit Load Failed",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "select 1/0",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"item": {
+				"type": "array"
+			},
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			}
+		},
+		"annotations": []
+	}
+}

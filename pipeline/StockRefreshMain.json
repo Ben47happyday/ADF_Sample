@@ -1,0 +1,170 @@
+{
+	"name": "StockRefreshMain",
+	"properties": {
+		"activities": [
+			{
+				"name": "Stop Pricing Resources",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Refresh Pricing Model",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Refresh Pricing Dashboard",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-07.australiasoutheast.logic.azure.com:443/workflows/6e55cf6d620249faac9005a85e57d31d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=A5dzlY0Cq47AVdoadrFARgwoQrdxfiGO0degOQeqE6E",
+					"body": {
+						"factoryName": "vnet-jbhifi-adf",
+						"resourceGroup": "jbinsights-prod"
+					}
+				}
+			},
+			{
+				"name": "Refresh Buyer Model",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Wait 1 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n\t\"type\": \"full\",\n\t\"RetryCount\": 1,\n\t\"objects\": [\n\t\t{\n\t\t\t\"database\": \"JB HiFi Tabular\",\n\t\t\t\"table\": \"StockFactLatest\",\n\t\t\t\"partition\": \"FactStockLatest\"\n\t\t},\n\t\t{\n\t\t\t\"database\": \"JB HiFi Tabular\",\n\t\t\t\"table\": \"StockFactLatestAll\",\n\t\t\t\"partition\": \"FactStockLatestAll\"\n\t\t}\n\t]\n}",
+						"ServerName": "jbinsightsaas01",
+						"ServerRegion": "australiasoutheast",
+						"ModelName": "JB HiFi Tabular"
+					}
+				}
+			},
+			{
+				"name": "Refresh Vendor Model",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Wait 1 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n\t\"type\": \"full\",\n\t\"RetryCount\": 1,\n\t\"objects\": [\n\t\t{\n\t\t\t\"database\": \"JB Vendor\",\n\t\t\t\"table\": \"StockFactLatest\",\n\t\t\t\"partition\": \"FactStockLatest\"\n\t\t},\n\t\t{\n\t\t\t\"database\": \"JB Vendor\",\n\t\t\t\"table\": \"StockFactLatestAll\",\n\t\t\t\"partition\": \"FactStockLatestAll\"\n\t\t}\n\n\t]\n}",
+						"ServerName": "apacjjbgaas01",
+						"ServerRegion": "australiasoutheast",
+						"ModelName": "JB Vendor"
+					}
+				}
+			},
+			{
+				"name": "Refresh Pricing Model",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Wait 1 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n\t\"type\": \"full\",\n\t\"RetryCount\": 1,\n\t\"objects\": [\n\t\t{\n\t\t\t\"database\": \"JB HiFi Pricing\",\n\t\t\t\"table\": \"StockFactLatest\",\n\t\t\t\"partition\": \"FactStockLatest\"\n\t\t}\n\t]\n}",
+						"ServerName": "jbpricingaas01",
+						"ServerRegion": "australiasoutheast",
+						"ModelName": "JB HiFi Pricing"
+					}
+				}
+			},
+			{
+				"name": "Refresh Pricing Dashboard",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Wait 1 sec",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": "{\n\t\"type\": \"full\",\n\t\"RetryCount\": 1,\n\t\"objects\": [\n\t\t{\n\t\t\t\"database\": \"JB HiFi Pricing Dashboard\",\n\t\t\t\"table\": \"StockFactLatest\",\n\t\t\t\"partition\": \"FactStockLatest\"\n\t\t}\n\t]\n}",
+						"ServerName": "jbinsightsaas01",
+						"ServerRegion": "australiasoutheast",
+						"ModelName": "JB HiFi Pricing Dashboard"
+					}
+				}
+			},
+			{
+				"name": "Wait 1 sec",
+				"type": "Wait",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 1
+				}
+			}
+		],
+		"folder": {
+			"name": "StockRefreshMain"
+		},
+		"annotations": []
+	}
+}

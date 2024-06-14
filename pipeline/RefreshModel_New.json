@@ -1,0 +1,303 @@
+{
+	"name": "RefreshModel_New",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get XMLA Refresh Command",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Check if there are partitions need to be created",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Check if there are partitions need to be deleted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[models].[sp__GetXMLARefreshCommand]",
+						"storedProcedureParameters": {
+							"modelName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.modelName",
+									"type": "Expression"
+								}
+							},
+							"tableName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.tableName",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "RefreshAASModel_Parent",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Get XMLA Refresh Command",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel_Parent",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": {
+							"value": "@activity('Get XMLA Refresh Command').output.firstRow.XMLA",
+							"type": "Expression"
+						},
+						"ServerName": {
+							"value": "@activity('Get XMLA Refresh Command').output.firstRow.ServerName",
+							"type": "Expression"
+						},
+						"ServerRegion": {
+							"value": "@activity('Get XMLA Refresh Command').output.firstRow.ServerRegion",
+							"type": "Expression"
+						},
+						"ModelName": {
+							"value": "@activity('Get XMLA Refresh Command').output.firstRow.ModelName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Check if there are partitions need to be created",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set variable NumOfPartitionToCreate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(variables('NumOfPartitionToCreate'), 0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Create new partition in AAS model",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "CreateDynamicPartition",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"modelName": {
+										"value": "@pipeline().parameters.modelName",
+										"type": "Expression"
+									},
+									"tableName": {
+										"value": "@pipeline().parameters.tableName",
+										"type": "Expression"
+									},
+									"PartitionType": {
+										"value": "@pipeline().parameters.partitionType",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Generate new partitions",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[models].[sp__GenerateDynamicPartition]",
+						"storedProcedureParameters": {
+							"modelName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.modelName",
+									"type": "Expression"
+								}
+							},
+							"PartitionType": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.partitionType",
+									"type": "Expression"
+								}
+							},
+							"tableName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.tableName",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Set variable NumOfPartitionToCreate",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Generate new partitions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "NumOfPartitionToCreate",
+					"value": {
+						"value": "@activity('Generate new partitions').output.firstRow.NumOfPartitionToCreate",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set variable NumOfPartitionToDelete",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Generate new partitions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "NumOfPartitionToDelete",
+					"value": {
+						"value": "@activity('Generate new partitions').output.firstRow.NumOfPartitionToDelete",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check if there are partitions need to be deleted",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set variable NumOfPartitionToDelete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(variables('NumOfPartitionToDelete'), 0)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Delete Old Partition From AAS Model",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "DeleteDynamicPartition",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"modelName": {
+				"type": "string",
+				"defaultValue": "JB HiFi Tabular"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "FactInventoryHistory"
+			},
+			"partitionType": {
+				"type": "string",
+				"defaultValue": "Monthly"
+			}
+		},
+		"variables": {
+			"NumOfPartitionToCreate": {
+				"type": "Integer",
+				"defaultValue": 0
+			},
+			"NumOfPartitionToDelete": {
+				"type": "Integer",
+				"defaultValue": 0
+			}
+		},
+		"annotations": []
+	}
+}

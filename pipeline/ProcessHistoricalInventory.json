@@ -1,0 +1,1044 @@
+{
+	"name": "ProcessHistoricalInventory",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Inventory Previous Day",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Get Extract SQL for Inventory History",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 6,
+					"retryIntervalInSeconds": 600,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@activity('Get Extract SQL for Inventory History').output.firstRow.ExtractSQL",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBatchSize": 0,
+						"preCopyScript": "TRUNCATE TABLE [adf].[InventoryHistory];",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "SnowflakeBlobStaging",
+							"type": "LinkedServiceReference"
+						},
+						"path": "jbhifi-snowflake/Inbound",
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "YEAR",
+									"type": "String"
+								},
+								"sink": {
+									"name": "year",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "MONTH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "month",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "DAY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "day",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "HISTORY_DATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "HISTORY_DATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "STORE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STORE",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TOTAL_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "STORE_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STORE_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ONLINE_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ONLINE_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERING_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ORDERING_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "IN_TRANSIT_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IN_TRANSIT_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "DISPLAY_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DISPLAY_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "FAULTY_POS_RETURN_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FAULTY_POS_RETURN_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "INSTORE_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INSTORE_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ON_PURCHASE_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ON_PURCHASE_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "BUFFER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BUFFER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "REPACK_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REPACK_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_JBRL_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_JBRL_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_CUSTOMER_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_CUSTOMER_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_RECEIVE_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_RECEIVE_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_TRANSFER_OUT_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_TRANSFER_OUT_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_CREDIT_REQUEST_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_CREDIT_REQUEST_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_ADJUSTMENT_ADDITION_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_ADJUSTMENT_ADDITION_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_ADJUSTMENT_SUBTRACTION_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_ADJUSTMENT_SUBTRACTION_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_FRAUD_CHECK_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_FRAUD_CHECK_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "AVERAGE_COST",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "AVERAGE_COST",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_SOH_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTAL_SOH_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_AVAIL_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTAL_AVAIL_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "ON_ORDER_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "ON_ORDER_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "DISPLAY_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "DISPLAY_VAL",
+									"type": "Decimal"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "JBSnowflake",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "[adf].[InventoryHistory]"
+						}
+					}
+				]
+			},
+			{
+				"name": "Get Extract SQL for Inventory History",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Waiting for new data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select ExtractSQL\nfrom audit.SourceTablesControl\nwhere SourceTablesControlID= 1",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Waiting for new data",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('IsNewData'), 'true')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get New Data For Inventory History",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SnowflakeSource",
+									"query": "SELECT COUNT(1) AS ISNEWDATA\nFROM SHARE_VNET.SHARE_VNET.V_AU_JB_INVENTORYHISTORY\nWHERE HISTORY_DATE = DATEADD(DAY,-1, CAST(GETDATE()  AS date )  )",
+									"exportSettings": {
+										"type": "SnowflakeExportCopyCommand"
+									}
+								},
+								"dataset": {
+									"referenceName": "JBSnowflake",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": true
+							}
+						},
+						{
+							"name": "If exists IsNewData",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get New Data For Inventory History",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('Get New Data For Inventory History').output.firstRow.ISNEWDATA, 0)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Wait2",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 120
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Good To Go",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "IsNewData",
+											"value": "true"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Unable to fetch data",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get New Data For Inventory History",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "IsNewData",
+								"value": "false"
+							}
+						}
+					],
+					"timeout": "0.03:00:00"
+				}
+			},
+			{
+				"name": "Insert Inventory History",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Get All Ready for Procedure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[sp__InsertHistoricalInventory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Insert Inventory Delta",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Get All Ready for Procedure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[sp__InsertDeltaInventory]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get SQL for Inventory History PP",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Waiting for new data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select ExtractSQL\nfrom audit.SourceTablesControl\nwhere SourceTablesControlID= 3 ",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Load Inventory Previous Day PP",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Get SQL for Inventory History PP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 6,
+					"retryIntervalInSeconds": 600,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@activity('Get SQL for Inventory History PP').output.firstRow.ExtractSQL",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBatchSize": 0,
+						"preCopyScript": "TRUNCATE TABLE [adf].[InventoryHistoryPP];",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "SnowflakeBlobStaging",
+							"type": "LinkedServiceReference"
+						},
+						"path": "jbhifi-snowflake/Inbound",
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "YEAR",
+									"type": "String"
+								},
+								"sink": {
+									"name": "year",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "MONTH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "month",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "DAY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "day",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "HISTORY_DATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "HISTORY_DATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "STORE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STORE",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ITEM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TOTAL_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "STORE_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STORE_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ONLINE_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ONLINE_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERING_AVAILABLE_SOH",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ORDERING_AVAILABLE_SOH",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "IN_TRANSIT_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "IN_TRANSIT_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "DISPLAY_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DISPLAY_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "FAULTY_POS_RETURN_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FAULTY_POS_RETURN_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "INSTORE_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INSTORE_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ON_PURCHASE_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ON_PURCHASE_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "BUFFER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BUFFER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "REPACK_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REPACK_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_JBRL_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_JBRL_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_CUSTOMER_ORDER_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_CUSTOMER_ORDER_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_RECEIVE_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_RECEIVE_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_TRANSFER_OUT_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_TRANSFER_OUT_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_CREDIT_REQUEST_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_CREDIT_REQUEST_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_ADJUSTMENT_ADDITION_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_ADJUSTMENT_ADDITION_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_ADJUSTMENT_SUBTRACTION_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_ADJUSTMENT_SUBTRACTION_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PENDING_FRAUD_CHECK_QTY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PENDING_FRAUD_CHECK_QTY",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "AVERAGE_COST",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "AVERAGE_COST",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_SOH_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTAL_SOH_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_AVAIL_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTAL_AVAIL_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "ON_ORDER_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "ON_ORDER_VAL",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "DISPLAY_VAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "DISPLAY_VAL",
+									"type": "Decimal"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "JBSnowflake",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "[adf].[InventoryHistoryPP]"
+						}
+					}
+				]
+			},
+			{
+				"name": "Get All Ready for Procedure",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "Load Inventory Previous Day",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load Inventory Previous Day PP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 1
+				}
+			},
+			{
+				"name": "Refresh Model",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Insert Inventory History",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Insert Inventory Delta",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshModelPremium",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"parameters": {
+			"IsNewData": {
+				"type": "String",
+				"defaultValue": "false"
+			}
+		},
+		"variables": {
+			"IsNewData": {
+				"type": "String",
+				"defaultValue": "false"
+			},
+			"ExtractQuery": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "HistoricalInventory"
+		},
+		"annotations": []
+	}
+}

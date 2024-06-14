@@ -1,0 +1,268 @@
+{
+	"name": "InventoryRange",
+	"properties": {
+		"activities": [
+			{
+				"name": "Audit Loading",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[audit].[DataLoadHistoryInsert]",
+						"storedProcedureParameters": {
+							"FileName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.FileNames",
+									"type": "Expression"
+								}
+							},
+							"FileETLID": {
+								"type": "Int32",
+								"value": null
+							},
+							"ProcessLogID": {
+								"type": "Int32",
+								"value": {
+									"value": "@int(pipeline().parameters.ProcessLogID)",
+									"type": "Expression"
+								}
+							},
+							"Status": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.StatusRunning",
+									"type": "Expression"
+								}
+							},
+							"FileType": {
+								"type": "String",
+								"value": "InventoryRange"
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Load Data",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Audit Loading",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "Import.LoadInventoryRange"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Audit Complete",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[DataLoadHistoryUpdate]",
+					"storedProcedureParameters": {
+						"DataETLID": {
+							"value": {
+								"value": "@activity('Audit Loading').output.firstRow.DataETLID",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"ErrorRowCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"FileRowCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"LoadRowCount": {
+							"value": {
+								"value": "@activity('Load Data').output.firstRow.varInsertedRows",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": {
+								"value": "@pipeline().parameters.StatusComplete",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"UpdateRowCount": {
+							"value": null,
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Audit Failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Audit Loading",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Audit Complete",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[DataLoadHistoryUpdate]",
+					"storedProcedureParameters": {
+						"DataETLID": {
+							"value": {
+								"value": "@activity('Audit Loading').output.firstRow.DataETLID",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"ErrorRowCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"FileRowCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"LoadRowCount": {
+							"value": null,
+							"type": "Int32"
+						},
+						"Status": {
+							"value": {
+								"value": "Failed",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"UpdateRowCount": {
+							"value": null,
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Fail pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Audit Failed",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"ProcessLogID": {
+				"type": "string"
+			},
+			"FileNames": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,56 @@
+{
+	"name": "RebatesStage",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "rebates.csv",
+				"container": "rebates-staging"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "ProductCode",
+				"type": "String"
+			},
+			{
+				"name": "MovedAt",
+				"type": "String"
+			},
+			{
+				"name": "LocationNumber",
+				"type": "String"
+			},
+			{
+				"name": "CategoryId",
+				"type": "String"
+			},
+			{
+				"name": "SubcategoryId",
+				"type": "String"
+			},
+			{
+				"name": "SaleChannel",
+				"type": "String"
+			},
+			{
+				"name": "AmountTaxExcluded",
+				"type": "String"
+			},
+			{
+				"name": "AmountTaxIncluded",
+				"type": "String"
+			}
+		]
+	}
+}

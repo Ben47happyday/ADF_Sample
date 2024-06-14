@@ -1,0 +1,721 @@
+{
+	"name": "RefreshModel",
+	"properties": {
+		"activities": [
+			{
+				"name": "Audit Refresh Model Start",
+				"description": "Initial a process main and get a process log id",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[audit].[ProcessLogInsert]",
+						"storedProcedureParameters": {
+							"ProcessName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								}
+							},
+							"ProcessRunID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"ProcessTriggerID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().TriggerId",
+									"type": "Expression"
+								}
+							},
+							"Status": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.StatusRunning",
+									"type": "Expression"
+								}
+							},
+							"AdfProcessLogID": {
+								"type": "Int",
+								"value": {
+									"value": "@pipeline().parameters.AdfProcessLogID",
+									"type": "Expression"
+								}
+							}
+						},
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set Process Log ID",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Audit Refresh Model Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "ProcessLogID",
+					"value": {
+						"value": "@{activity('Audit Refresh Model Start').output.firstRow.ProcessLogID}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get Models for Refresh",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Check RefreshProcess",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT ModelName, TabularInstance, RefreshOrder \nFROM [models].[TabularModelsToRefresh]\nORDER BY RefreshOrder",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For each model",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Models for Refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Models for Refresh').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Audit Tabular Refresh Info Insert",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[audit].[TabularRefreshInfoInsert]",
+									"storedProcedureParameters": {
+										"ModelName": {
+											"type": "String",
+											"value": {
+												"value": "@item().ModelName",
+												"type": "Expression"
+											}
+										},
+										"ProcessLogID": {
+											"type": "Int32",
+											"value": {
+												"value": "@int(variables('ProcessLogID'))",
+												"type": "Expression"
+											}
+										},
+										"RefreshType": {
+											"type": "String",
+											"value": "Partition"
+										},
+										"Status": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.StatusRunning",
+												"type": "Expression"
+											}
+										},
+										"TabularInstance": {
+											"type": "String",
+											"value": {
+												"value": "@item().TabularInstance",
+												"type": "Expression"
+											}
+										}
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Failed - Clear the update partition flag",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "RefreshAASModel_Parent",
+									"dependencyConditions": [
+										"Failed",
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[UpdatePartitionRefreshComplete]",
+								"storedProcedureParameters": {
+									"ModelName": {
+										"value": {
+											"value": "@item().ModelName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Model Refresh Failed",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "Failed - Clear the update partition flag",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Model Refresh Failed",
+								"errorCode": "403"
+							}
+						},
+						{
+							"name": "Create XMLA Command",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Audit Tabular Refresh Info Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[models].[sp__RefreshTabularPartitions]",
+									"storedProcedureParameters": {
+										"TabularModelName": {
+											"type": "String",
+											"value": {
+												"value": "@item().ModelName",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "RefreshAASModel_Parent",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Create XMLA Command",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshAASModel_Parent",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"XMLA": {
+										"value": "@activity('Create XMLA Command').output.firstRow.XMLA",
+										"type": "Expression"
+									},
+									"ServerName": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ServerName",
+										"type": "Expression"
+									},
+									"ServerRegion": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ServerRegion",
+										"type": "Expression"
+									},
+									"ModelName": {
+										"value": "@activity('Create XMLA Command').output.firstRow.ModelName",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Clear the update partition flag",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "RefreshAASModel_Parent",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[UpdatePartitionRefreshComplete]",
+								"storedProcedureParameters": {
+									"ModelName": {
+										"value": {
+											"value": "@item().ModelName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Is Buyer Model Completed",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "RefreshAASModel_Parent",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('Create XMLA Command').output.firstRow.ModelName, 'JB HiFi Tabular')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "TriggerDeptReport",
+										"type": "ExecutePipeline",
+										"dependsOn": [
+											{
+												"activity": "Wait 1 sec",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "TriggerDeptReport",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true
+										}
+									},
+									{
+										"name": "Drop a Completion File",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "Wait 1 sec",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "BlobSource",
+												"recursive": true
+											},
+											"sink": {
+												"type": "BlobSink"
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "JBHIFIInboundFile",
+												"type": "DatasetReference",
+												"parameters": {
+													"filename": "FlagSource\\buyerRefresh.txt",
+													"delimiter": ",",
+													"container": "main-flag"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "JBHIFIInboundFile",
+												"type": "DatasetReference",
+												"parameters": {
+													"filename": "buyerRefresh.txt",
+													"delimiter": ",",
+													"container": "main-flag"
+												}
+											}
+										]
+									},
+									{
+										"name": "Wait 1 sec",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 1
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Audit Log Finished",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "For each model",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[ProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(variables('ProcessLogID'))",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": {
+								"value": "@pipeline().parameters.StatusComplete",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Audit Log Failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Audit Log Finished",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					},
+					{
+						"activity": "Audit Refresh Model Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[audit].[ProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(variables('ProcessLogID'))",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Failed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Fail the pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Audit Log Failed",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check RefreshProcess",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set Process Log ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.RefreshProcess, 'MainCore')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Update Partition Stock Refresh",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[JBUpdatePartitionStockRefresh]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Update Month Partitions",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[UpdateMonthPartitions]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Update Partition Refresh",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Update Month Partitions",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[models].[sp__UpdatePartitionRefresh]",
+								"storedProcedureParameters": {
+									"RefreshModelProcessLogID": {
+										"value": {
+											"value": "@int(variables('ProcessLogID'))",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusReady": {
+				"type": "string",
+				"defaultValue": "Ready"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"AdfProcessLogID": {
+				"type": "string",
+				"defaultValue": "-1"
+			},
+			"RefreshProcess": {
+				"type": "string"
+			},
+			"Models": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			}
+		},
+		"annotations": []
+	}
+}

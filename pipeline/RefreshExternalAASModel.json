@@ -1,0 +1,41 @@
+{
+	"name": "RefreshExternalAASModel",
+	"properties": {
+		"activities": [
+			{
+				"name": "Send XMLA to External Model",
+				"type": "WebHook",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-30.australiaeast.logic.azure.com:443/workflows/77205b1c874847a0bafcee87b3d7f1af/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VMOUcNTMypO1q4OWnfd47RunVrl10YnAPKAmWuOLzyY",
+					"method": "POST",
+					"body": {
+						"value": "@json(concat('{\"location\":\"', pipeline().parameters.Location,'\",',\n'\"model\": \"',pipeline().parameters.Model,'\",',\n'\"serverName\":\"', pipeline().parameters.ServerName,'\",',\n'\"xmlaCommand\":',pipeline().parameters.XMLA,'}' ) )",
+						"type": "Expression"
+					},
+					"timeout": "01:00:00",
+					"reportStatusOnCallBack": true
+				}
+			}
+		],
+		"parameters": {
+			"Location": {
+				"type": "string"
+			},
+			"Model": {
+				"type": "string"
+			},
+			"ServerName": {
+				"type": "string"
+			},
+			"XMLA": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "AAS"
+		},
+		"annotations": []
+	}
+}

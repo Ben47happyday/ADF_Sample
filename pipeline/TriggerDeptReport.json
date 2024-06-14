@@ -1,0 +1,253 @@
+{
+	"name": "TriggerDeptReport",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Completion of Sales",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select * \nfrom Audit.vw__BuyerSalesRefreshStatus",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check Completion of Rebates",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * \nFROM AUDIT.vw__BuyerRebatesRefreshStatus",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "IsRebatesCompleted",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check Completion of Rebates",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "IsRebatesCompleted",
+					"value": {
+						"value": "@if(greater(activity('Check Completion of Rebates').output.firstRow.CompletedCount,0), true, false)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If ALL Ready",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "IsRebatesCompleted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "IsReportSent",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "IsSalesCompleted",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(and(variables('IsRebatesCompleted') , variables('IsSalesCompleted')), variables('IsReportSent'))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Insert Log",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Trigger Dept Reports in Power Auto",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[Audit].[sp__InsertReportSendLog]"
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Trigger Dept Reports in Power Auto",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://prod-10.australiasoutheast.logic.azure.com:443/workflows/73392def7b174fdc98a899900aa1a19f/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2ftriggers%2fmanual%2frun&sv=1.0&sig=IzlbMALgfiTfEfE_5LYWwfhatP79o01-_qNJmgUQbDY",
+								"method": "POST",
+								"body": {
+									"message": "Trigger Power Auto"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Check Dept Report Send Status",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * \nFROM audit.vw__DeptreportSendStatus",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "IsReportSent",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check Dept Report Send Status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "IsReportSent",
+					"value": {
+						"value": "@if(greater(activity('Check Dept Report Send Status').output.firstRow.sentCount,0), false, true)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IsSalesCompleted",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Check Completion of Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "IsSalesCompleted",
+					"value": {
+						"value": "@if(greater(activity('Check Completion of Sales').output.firstRow.CompletedCount,0), true, false)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"IsSalesCompleted": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"IsRebatesCompleted": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"IsReportSent": {
+				"type": "Boolean",
+				"defaultValue": false
+			}
+		},
+		"folder": {
+			"name": "Rebates"
+		},
+		"annotations": []
+	}
+}

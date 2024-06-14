@@ -1,0 +1,11 @@
+{
+	"name": "JBHIFI",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=180;Data Source=jb-insights-sqlserver.database.windows.net;Initial Catalog=\"JB Insights\";Packet size=16000"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

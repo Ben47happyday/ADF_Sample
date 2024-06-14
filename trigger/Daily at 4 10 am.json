@@ -1,0 +1,28 @@
+{
+	"name": "Daily at 4 10 am",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "JBWrittenSales",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"IsNewData": "false",
+					"Rollingdays": "7"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-05-21T04:10:00",
+				"timeZone": "AUS Eastern Standard Time"
+			}
+		}
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"name": "VNetJBMusicRange",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "VNet_JBMusic",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "RETAIL STORE",
+				"type": "nvarchar"
+			},
+			{
+				"name": "STOCK CODE",
+				"type": "nvarchar"
+			},
+			{
+				"name": "RANGE",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "jbinsights",
+			"table": "vwRangeReport"
+		}
+	}
+}

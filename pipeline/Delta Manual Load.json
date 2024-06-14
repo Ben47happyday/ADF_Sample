@@ -1,0 +1,849 @@
+{
+	"name": "Delta Manual Load",
+	"properties": {
+		"activities": [
+			{
+				"name": "Truncate staging Tables",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "Get File Names",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "truncate table [adf].[JBDelta_manual]"
+						}
+					]
+				}
+			},
+			{
+				"name": "Get File Names",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "JBHIFIInbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "jbhifi-manual"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					]
+				}
+			},
+			{
+				"name": "For Each File",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Truncate staging Tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get File Names').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy all files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BlobSource",
+									"recursive": false
+								},
+								"sink": {
+									"type": "SqlSink",
+									"writeBatchSize": 10000
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Store"
+											},
+											"sink": {
+												"name": "Store",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PLU"
+											},
+											"sink": {
+												"name": "PLU",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Supp_Code"
+											},
+											"sink": {
+												"name": "Supp_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "QUANTITY"
+											},
+											"sink": {
+												"name": "QUANTITY",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DATE"
+											},
+											"sink": {
+												"name": "DATE",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SOH"
+											},
+											"sink": {
+												"name": "SOH",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "On_Order"
+											},
+											"sink": {
+												"name": "On_Order",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Stock_Code"
+											},
+											"sink": {
+												"name": "Stock_Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Alt_Plu"
+											},
+											"sink": {
+												"name": "Alt_Plu",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "InvCost(inc)"
+											},
+											"sink": {
+												"name": "InvCost(inc)",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Season Code"
+											},
+											"sink": {
+												"name": "Season Code",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OnPromo"
+											},
+											"sink": {
+												"name": "OnPromo",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PromoStartDate"
+											},
+											"sink": {
+												"name": "PromoStartDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PromoEndDate"
+											},
+											"sink": {
+												"name": "PromoEndDate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PromoId"
+											},
+											"sink": {
+												"name": "PromoId",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PromoDescription"
+											},
+											"sink": {
+												"name": "PromoDescription",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Genre"
+											},
+											"sink": {
+												"name": "Genre",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Release_Date"
+											},
+											"sink": {
+												"name": "Release_Date",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Committed"
+											},
+											"sink": {
+												"name": "Committed",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Customer Order"
+											},
+											"sink": {
+												"name": "Customer Order",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Customer Order Allocated"
+											},
+											"sink": {
+												"name": "Customer Order Allocated",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "In Transit"
+											},
+											"sink": {
+												"name": "In Transit",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Department_Id"
+											},
+											"sink": {
+												"name": "Department_Id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Supplier_Id"
+											},
+											"sink": {
+												"name": "Supplier_Id",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SupplierName"
+											},
+											"sink": {
+												"name": "SupplierName",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Title"
+											},
+											"sink": {
+												"name": "Title",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Artist/Author"
+											},
+											"sink": {
+												"name": "Artist/Author",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Classification"
+											},
+											"sink": {
+												"name": "Classification",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Label"
+											},
+											"sink": {
+												"name": "Label",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Medium"
+											},
+											"sink": {
+												"name": "Medium",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ChangeStatus"
+											},
+											"sink": {
+												"name": "ChangeStatus",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Range"
+											},
+											"sink": {
+												"name": "Range",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Min_SOH"
+											},
+											"sink": {
+												"name": "Min_SOH",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Total Sales Value"
+											},
+											"sink": {
+												"name": "Total Sales Value",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Total Cost"
+											},
+											"sink": {
+												"name": "Total Cost",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Total GP$"
+											},
+											"sink": {
+												"name": "Total GP$",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Ticket Price"
+											},
+											"sink": {
+												"name": "Ticket Price",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ELQ Price"
+											},
+											"sink": {
+												"name": "ELQ Price",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Promo Price"
+											},
+											"sink": {
+												"name": "Promo Price",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RetailSales"
+											},
+											"sink": {
+												"name": "RetailSales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CommercialSales"
+											},
+											"sink": {
+												"name": "CommercialSales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OnLineSales"
+											},
+											"sink": {
+												"name": "OnLineSales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Retail Total Sales"
+											},
+											"sink": {
+												"name": "Retail Total Sales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Retail Total Cost "
+											},
+											"sink": {
+												"name": "Retail Total Cost ",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Retail Total GP$"
+											},
+											"sink": {
+												"name": "Retail Total GP$",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Commercial Total Sales"
+											},
+											"sink": {
+												"name": "Commercial Total Sales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Commercial Total Cost"
+											},
+											"sink": {
+												"name": "Commercial Total Cost",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Commercial Total GP$"
+											},
+											"sink": {
+												"name": "Commercial Total GP$",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Online Total Sales"
+											},
+											"sink": {
+												"name": "Online Total Sales",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Online Total Cost"
+											},
+											"sink": {
+												"name": "Online Total Cost",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Online Total GP$"
+											},
+											"sink": {
+												"name": "Online Total GP$",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Scanback"
+											},
+											"sink": {
+												"name": "Scanback",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Rebate"
+											},
+											"sink": {
+												"name": "Rebate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "AvgCost"
+											},
+											"sink": {
+												"name": "AvgCost",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ReOrdQty"
+											},
+											"sink": {
+												"name": "ReOrdQty",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TaxRate"
+											},
+											"sink": {
+												"name": "TaxRate",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "Diminishing"
+											},
+											"sink": {
+												"name": "Diminishing",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "SaleableSoh"
+											},
+											"sink": {
+												"name": "SaleableSoh",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PendingAdjustmentSubtractionQuantity"
+											},
+											"sink": {
+												"name": "PendingAdjustmentSubtractionQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "FaultyPosReturnQuantity"
+											},
+											"sink": {
+												"name": "FaultyPosReturnQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PendingJbrlQuantity"
+											},
+											"sink": {
+												"name": "PendingJbrlQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "DisplayQuantity"
+											},
+											"sink": {
+												"name": "DisplayQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PendingTransferOutQuantity"
+											},
+											"sink": {
+												"name": "PendingTransferOutQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PendingCustomerOrderQuantity"
+											},
+											"sink": {
+												"name": "PendingCustomerOrderQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "PendingFraudCheckQuantity"
+											},
+											"sink": {
+												"name": "PendingFraudCheckQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "InStoreOrderQuantity"
+											},
+											"sink": {
+												"name": "InStoreOrderQuantity",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RepackQty"
+											},
+											"sink": {
+												"name": "RepackQty",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "OnlineDemand"
+											},
+											"sink": {
+												"name": "OnlineDemand",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "CommercialDemand"
+											},
+											"sink": {
+												"name": "CommercialDemand",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "RetailDemand"
+											},
+											"sink": {
+												"name": "RetailDemand",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "TDCStoreID"
+											},
+											"sink": {
+												"name": "TDCStoreID",
+												"type": "String"
+											}
+										},
+										{
+											"source": {
+												"name": "ProductGroupID"
+											},
+											"sink": {
+												"name": "ProductGroupID",
+												"type": "String"
+											}
+										}
+									]
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "JBHIFIInboundFileZip",
+									"type": "DatasetReference",
+									"parameters": {
+										"filename": {
+											"value": "@item().Name",
+											"type": "Expression"
+										},
+										"delimiter": {
+											"value": ",",
+											"type": "Expression"
+										},
+										"quotecharacter": "\"",
+										"container": {
+											"value": "jbhifi-manual",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "TableDynamic",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "[adf].[JBDelta_manual]"
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete1",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "Copy all files",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "JBHIFIInboundFileZip",
+									"type": "DatasetReference",
+									"parameters": {
+										"filename": {
+											"value": "@item().Name",
+											"type": "Expression"
+										},
+										"delimiter": "|",
+										"quotecharacter": "\"",
+										"container": "jbhifi-manual"
+									}
+								},
+								"logStorageSettings": {
+									"linkedServiceName": {
+										"referenceName": "jbinsightsstorage",
+										"type": "LinkedServiceReference"
+									}
+								},
+								"enableLogging": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"MusicFileName": {
+				"type": "String",
+				"defaultValue": "JB_20221011_Music_Delta_daily.zip"
+			},
+			"HardwareFileName": {
+				"type": "String",
+				"defaultValue": "merge1.zip"
+			},
+			"MovieFileName": {
+				"type": "String",
+				"defaultValue": "JB_20221011_Movies_Delta_daily.zip"
+			}
+		},
+		"annotations": []
+	}
+}

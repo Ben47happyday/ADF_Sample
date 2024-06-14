@@ -1,0 +1,35 @@
+{
+	"name": "Daily Trigger 430 am",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ProcessHistoricalInventory",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"IsNewData": "false"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-02-02T07:30:00",
+				"timeZone": "AUS Eastern Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						4
+					]
+				}
+			}
+		}
+	}
+}

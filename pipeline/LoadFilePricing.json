@@ -1,0 +1,863 @@
+{
+	"name": "LoadFilePricing",
+	"properties": {
+		"activities": [
+			{
+				"name": "ReasonCodesFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 8)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "PromoLocationFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 9)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "PromoItemFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 10)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ExceptionLogicFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 11)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "LabourDataFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 12)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ReasonCodes File",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ReasonCodesFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('ReasonCodesFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Promo Location Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "PromoLocationFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('PromoLocationFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Promo Item Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "PromoItemFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('PromoItemFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Exception Logic Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ExceptionLogicFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('ExceptionLogicFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "LabourData Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "LabourDataFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('LabourDataFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "NETNETGPFilter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 13)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "NETNETGP Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "NETNETGPFilter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('NETNETGPFilter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Online_Products_Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 14)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Online_Products Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Online_Products_Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Online_Products_Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Wait",
+				"type": "Wait",
+				"dependsOn": [
+					{
+						"activity": "ReasonCodes File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Promo Location Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Exception Logic Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Promo Item Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "LabourData Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "NETNETGP Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Online_Products Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "KVI_List Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Competitor Matrix Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Parent Child Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load MT Products Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load MT Price files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load Promo Master file",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Load Online Price",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Competitor YDMatrix Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "YD_List Filers",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 10
+				}
+			},
+			{
+				"name": "Fail Pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Wait",
+						"dependencyConditions": [
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "KVI_List Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 15)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "KVI_List Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "KVI_List Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('KVI_List Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Competitor Matrix Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 16)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Competitor Matrix Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Competitor Matrix Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Competitor Matrix Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Parent Child Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 17)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Parent Child Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Parent Child Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Parent Child Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "MT Products Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 18)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load MT Products Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "MT Products Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('MT Products Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "MT Price Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 19)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load MT Price files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "MT Price Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('MT Price Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Promo Master Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 20)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load Promo Master file",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Promo Master Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Promo Master Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Online Pricing Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 21)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load Online Price",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Online Pricing Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Online Pricing Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "Competitor YDMatrix Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 26)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Competitor YDMatrix Files",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Competitor YDMatrix Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('Competitor YDMatrix Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			},
+			{
+				"name": "YD_List Filter",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.FIles",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@equals(item().SourceFilesControlID, 25)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "YD_List Filers",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "YD_List Filter",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "IndividualFiles",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"item": {
+							"value": "@activity('YD_List Filter').output.value",
+							"type": "Expression"
+						},
+						"StatusRunning": "Running",
+						"StatusComplete": "Completed"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"FIles": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Pricing"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

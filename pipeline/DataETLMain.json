@@ -1,0 +1,818 @@
+{
+	"name": "DataETLMain",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete wrong java stage data",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ETL].[deleteIncorrectJavastageData]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Get Trigger Count",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Delete wrong java stage data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[ETL].[TriggerCount]",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check Trigger",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Trigger Count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(activity('Get Trigger Count').output.firstRow.TriggerCount)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Audit Process Log Insert",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlSource",
+									"sqlReaderStoredProcedureName": "[audit].[ProcessLogInsert]",
+									"storedProcedureParameters": {
+										"ProcessName": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"ProcessRunID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"ProcessTriggerID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().TriggerId",
+												"type": "Expression"
+											}
+										},
+										"Status": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.StatusRunning",
+												"type": "Expression"
+											}
+										},
+										"AdfProcessLogID": {
+											"type": "Int",
+											"value": {
+												"value": "@pipeline().parameters.AdfProcessLogID",
+												"type": "Expression"
+											}
+										}
+									},
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Complete",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Load Fact",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(variables('ProcessLogID'))",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": {
+											"value": "@pipeline().parameters.StatusComplete",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SetVariable",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ProcessLogID",
+								"value": {
+									"value": "@{activity('Audit Process Log Insert').output.firstRow.ProcessLogID}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Load Product",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set import file names",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ProductNew",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									},
+									"FileNames": {
+										"value": "@variables('ImportFileNames')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Audit Process Log Complete",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(variables('ProcessLogID'))",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Load Store",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set import file names",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Store",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Genre Range",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "GenreRange",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Promo",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Product",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Store",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Budget",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Store Supplementary",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PromoNew",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									},
+									"FileNames": {
+										"value": "@variables('ImportFileNames')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Store Space",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "StoreSpace",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Fail pipeline",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Failed",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "select 1/0",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Load Budget",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set import file names",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Budget",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Product Range",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ProductRange",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Store Supplementary",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set import file names",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "StoreSupplementary",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Suppliers",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Promo",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "SuppliersNew",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									},
+									"FileNames": {
+										"value": "@variables('ImportFileNames')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Import Fact",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "SetVariable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "FactImport",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Get Import File Names",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Import Fact",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "SELECT  ISNULL(STRING_AGG(FileName, ', '), '-') AS FileNames\nFROM (\nSELECT distinct e.FileName, e.ID AS FileETLID \n FROM javastage.JBFactImport d \nINNER JOIN audit.FileLoadHistory e ON e.ID = d.loadid\nWHERE e.Status = 'Completed'\n) Z",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Set import file names",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Import File Names",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ImportFileNames",
+								"value": {
+									"value": "@{activity('Get Import File Names').output.firstRow.FileNames}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Load Fact",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Genre Range",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Store Space",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Product Range",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Zero Movement",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load Transactions",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Load GMData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "LoadFact",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"AdfProcessLogID": {
+										"value": "@pipeline().parameters.AdfProcessLogID",
+										"type": "Expression"
+									},
+									"ProcessName": {
+										"value": "@pipeline().parameters.ProcessName",
+										"type": "Expression"
+									},
+									"ProcessLogID": {
+										"value": "@int(variables('ProcessLogID'))",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Zero Movement",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "ZeroStockMovement",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load Transactions",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "Transactions",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Load GMData",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Load Suppliers",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "GMData",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@variables('ProcessLogID')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"AdfProcessLogID": {
+				"type": "int",
+				"defaultValue": -1
+			},
+			"ProcessName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			},
+			"ImportFileNames": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

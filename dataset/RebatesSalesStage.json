@@ -1,0 +1,76 @@
+{
+	"name": "RebatesSalesStage",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "sales.csv",
+				"container": "rebates-staging"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "ProductCode",
+				"type": "String"
+			},
+			{
+				"name": "MovedAt",
+				"type": "String"
+			},
+			{
+				"name": "Quantity",
+				"type": "String"
+			},
+			{
+				"name": "SalesTaxExcluded",
+				"type": "String"
+			},
+			{
+				"name": "SalesTaxIncluded",
+				"type": "String"
+			},
+			{
+				"name": "CostTaxExcluded",
+				"type": "String"
+			},
+			{
+				"name": "CostTaxIncluded",
+				"type": "String"
+			},
+			{
+				"name": "LocationNumber",
+				"type": "String"
+			},
+			{
+				"name": "SaleChannel",
+				"type": "String"
+			},
+			{
+				"name": "DepartmentNumber",
+				"type": "String"
+			},
+			{
+				"name": "ProductGroupNumber",
+				"type": "String"
+			},
+			{
+				"name": "Season",
+				"type": "String"
+			},
+			{
+				"name": "Brand",
+				"type": "String"
+			}
+		]
+	}
+}

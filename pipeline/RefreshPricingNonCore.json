@@ -1,0 +1,296 @@
+{
+	"name": "RefreshPricingNonCore",
+	"properties": {
+		"activities": [
+			{
+				"name": "JBCompetitorPricingLoad",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Import].[JBCompetitorPricing]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(pipeline().parameters.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Pricing Dashboard Trigger",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Stop Pricing Resources",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Audit].[JBPricingDashboardTrigger]",
+					"storedProcedureParameters": {
+						"Id": {
+							"value": {
+								"value": "@int(pipeline().parameters.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Ready",
+							"type": "String"
+						},
+						"TriggerSource": {
+							"value": "PricingProcess",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Stock Trigger",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Pricing Dashboard Trigger",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Audit].[JBStockTrigger]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(pipeline().parameters.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Ready",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Create Pricing Process Log Entry",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "JBCompetitorPricingLoad",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[Audit].[JBPricingProcessLogInsert]",
+					"storedProcedureParameters": {
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(pipeline().parameters.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Load Yesterday Comments",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Await LA Compeletion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[loadYesterdayComment]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Refresh Pricing LA",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Create Pricing Process Log Entry",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-18.australiasoutheast.logic.azure.com:443/workflows/262a6d3567ca4c1f97ac9435b2987c07/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dPqw7YMS_Z3rhtxpgoWhlUN6Qv7JVBcUSvHlz0PAZck",
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\"ProcessLogID\":\"', String(pipeline().parameters.ProcessLogID) , '\",\"Key\":\"b6765ba5-e9fe-4b3d-b31e-8d789e8d4stu\"}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Await LA Compeletion",
+				"type": "Validation",
+				"dependsOn": [
+					{
+						"activity": "Refresh Pricing LA",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "PricingRefreshFinishFile",
+						"type": "DatasetReference",
+						"parameters": {
+							"ProcessLogID": {
+								"value": "@pipeline().parameters.ProcessLogID",
+								"type": "Expression"
+							}
+						}
+					},
+					"timeout": "0.01:20:00",
+					"sleep": 10
+				}
+			},
+			{
+				"name": "Stop Pricing Resources",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Load Yesterday Comments",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.australiasoutheast.logic.azure.com:443/workflows/6e55cf6d620249faac9005a85e57d31d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=A5dzlY0Cq47AVdoadrFARgwoQrdxfiGO0degOQeqE6E",
+					"method": "POST",
+					"body": {
+						"factoryName": "jbpricingaas01",
+						"irName": "jbhifi-pricing-ir",
+						"resourceGroup": "jb-pricing-prod"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"StatusRunning": {
+				"type": "string",
+				"defaultValue": "Running"
+			},
+			"StatusComplete": {
+				"type": "string",
+				"defaultValue": "Completed"
+			},
+			"ProcessLogID": {
+				"type": "int",
+				"defaultValue": -1
+			}
+		},
+		"variables": {
+			"ProcessLogID": {
+				"type": "String"
+			},
+			"DataLevel1": {
+				"type": "Array",
+				"defaultValue": [
+					"ReasonCodes"
+				]
+			}
+		},
+		"folder": {
+			"name": "Pricing"
+		},
+		"annotations": []
+	}
+}

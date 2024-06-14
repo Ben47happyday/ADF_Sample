@@ -1,0 +1,406 @@
+{
+	"name": "ProcessRefreshAndCleanup",
+	"properties": {
+		"activities": [
+			{
+				"name": "Process Start",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlSource",
+						"sqlReaderStoredProcedureName": "[adf].[ADFProcessLogInsert]",
+						"storedProcedureParameters": {
+							"ProcessGUID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"ProcessName": {
+								"type": "String",
+								"value": "ProcessMain"
+							},
+							"Status": {
+								"type": "String",
+								"value": "Running"
+							}
+						}
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check whether to Run pipeline",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Process Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greaterOrEquals(activity('Process Start').output.firstRow.ProcessLogID,  1)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "RefreshMainandCleanup",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshMainandCleanup",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@{activity('Audit Process Log Insert').output.firstRow.ProcessLogID}",
+										"type": "Expression"
+									},
+									"AdfProcessLogID": {
+										"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+										"type": "Expression"
+									},
+									"ProcessName": "ProcessMain"
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Insert",
+							"description": "Initial a process main and get a process log id",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlSource",
+									"sqlReaderStoredProcedureName": "[audit].[ProcessLogInsert]",
+									"storedProcedureParameters": {
+										"ProcessName": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										},
+										"ProcessRunID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"ProcessTriggerID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().TriggerId",
+												"type": "Expression"
+											}
+										},
+										"Status": {
+											"type": "String",
+											"value": "Running"
+										},
+										"AdfProcessLogID": {
+											"type": "Int",
+											"value": {
+												"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Audit Process Log Complete",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "RefreshMainandCleanup",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": {
+											"value": "Completed",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Audit Process Log Failed",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Insert",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Audit Process Log Complete",
+									"dependencyConditions": [
+										"Skipped"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[audit].[ProcessLogUpdate]",
+								"storedProcedureParameters": {
+									"ProcessLogID": {
+										"value": {
+											"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"Status": {
+										"value": "Failed",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "JBHIFI",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Failed Pipleline",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "Audit Process Log Failed",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "select 1/0"
+								},
+								"dataset": {
+									"referenceName": "JBHIFI",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ProcessFinish",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Check whether to Run pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[adf].[adfProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessGUID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Completed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Process Failed",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Check whether to Run pipeline",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[adf].[adfProcessLogUpdate]",
+					"storedProcedureParameters": {
+						"ProcessGUID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"ProcessLogID": {
+							"value": {
+								"value": "@int(activity('Process Start').output.firstRow.ProcessLogID)",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"Status": {
+							"value": "Failed",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Fail pipeline",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Process Failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select 1/0"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

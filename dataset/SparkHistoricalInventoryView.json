@@ -1,0 +1,12 @@
+{
+	"name": "SparkHistoricalInventoryView",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "HisoricalInventoryProd",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SparkObject",
+		"schema": []
+	}
+}

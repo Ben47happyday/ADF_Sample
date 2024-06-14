@@ -1,0 +1,125 @@
+{
+	"name": "LoadFact",
+	"properties": {
+		"activities": [
+			{
+				"name": "If Condition",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Lookup Load Fact Flag",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(activity('Lookup Load Fact Flag').output.firstRow.TriggerCount)",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Fact Delta",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "FactDelta",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@pipeline().parameters.ProcessLogID",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Refresh and Cleanup",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Fact Delta",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "RefreshMainandCleanup",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"StatusRunning": "Running",
+									"StatusComplete": "Completed",
+									"ProcessLogID": {
+										"value": "@pipeline().parameters.ProcessLogID",
+										"type": "Expression"
+									},
+									"AdfProcessLogID": {
+										"value": "@pipeline().parameters.AdfProcessLogID",
+										"type": "Expression"
+									},
+									"ProcessName": {
+										"value": "@pipeline().parameters.ProcessName",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Lookup Load Fact Flag",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[etl].[LoadFactTriggerCount]"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"AdfProcessLogID": {
+				"type": "int",
+				"defaultValue": -1
+			},
+			"ProcessName": {
+				"type": "string"
+			},
+			"ProcessLogID": {
+				"type": "int",
+				"defaultValue": -1
+			}
+		},
+		"folder": {
+			"name": "Main"
+		},
+		"annotations": []
+	}
+}

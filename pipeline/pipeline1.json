@@ -1,0 +1,29 @@
+{
+	"name": "pipeline1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Refresh Pricing LA",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-18.australiasoutheast.logic.azure.com:443/workflows/262a6d3567ca4c1f97ac9435b2987c07/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dPqw7YMS_Z3rhtxpgoWhlUN6Qv7JVBcUSvHlz0PAZck",
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\"ProcessLogID\":\"1234\",\"Key\":\"b6765ba5-e9fe-4b3d-b31e-8d789e8d4stu\"}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"annotations": []
+	}
+}

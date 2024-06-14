@@ -1,0 +1,56 @@
+{
+	"name": "Create JBHardwareFactRange",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy data1",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "\nSELECT Y.Store,\n       Y.Stock_Code,       \n       Y.StartDate,\n       Y.EndDate,\n       Y.createFile AS CreateFile,\n       ISNULL(updateFile, createFile) AS LastUpdateFile,\n\t   DimProductId\nFROM\n(\nSELECT  Store, Stock_Code, Range, date AS StartDate,\nISNULL(DATEADD(DAY, -1, LEAD(date) OVER(PARTITION BY X.Stock_Code, X.Store ORDER BY date)), '9999-12-31') AS EndDate\n, X.createFile, DimProductID\n, LEAD(X.createFile) OVER(PARTITION BY X.Stock_Code, X.Store ORDER BY date) AS updateFile\nFROM\n(\nSELECT date, Store, Stock_Code, Range, DimProductID\n, LAG(range, 1, -1) OVER(PARTITION BY Stock_Code, store ORDER BY date) AS previousRange\n, LoadFile AS createFile\n FROM whs.JBHardwareFact\n ) X\n WHERE X.Range <> X.previousRange\n ) Y\n WHERE Y.Range = 1",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "truncate table whs.JBHardwareFactRange",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "whs.JBHardwareFact"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamicII",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "JBHardwareFactRange",
+							"schema": "whs"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "RangeHistory"
+		},
+		"annotations": []
+	}
+}

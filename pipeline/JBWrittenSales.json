@@ -1,0 +1,464 @@
+{
+	"name": "JBWrittenSales",
+	"properties": {
+		"activities": [
+			{
+				"name": "Load Written Sales",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Set Rolling Days",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 6,
+					"retryIntervalInSeconds": 600,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@replace(activity('Get Extract SQL for Written Sales').output.firstRow.ExtractSQL, 'RollingDays', variables('RollingDays'))",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"writeBatchSize": 0,
+						"preCopyScript": "TRUNCATE TABLE [adf].[WrittenSales];",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "SnowflakeBlobStaging",
+							"type": "LinkedServiceReference"
+						},
+						"path": "jbhifi-snowflake/Inbound",
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "SALE_CHANNEL_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALE_CHANNEL_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SUB_SALE_CHANNEL_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SUB_SALE_CHANNEL_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WRITTEN_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WRITTEN_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WRITTEN_LOCATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WRITTEN_LOCATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FULFILMENT_LOCATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FULFILMENT_LOCATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FULFILMENT_TYPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FULFILMENT_TYPE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STOCK_CODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STOCK_CODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "QUANTITY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "QUANTITY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALES_AMOUNT_INC_GST",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALES_AMOUNT_INC_GST",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALES_AMOUNT_EXC_GST",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALES_AMOUNT_EXC_GST",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTAL_DISCOUNT_AMT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TOTAL_DISCOUNT_AMT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALES_@_SHELF_PRICE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALES_@_SHELF_PRICE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERED_DATE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DELIVERED_DATE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STATUS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STATUS",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "JBSnowflake",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "TableDynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"tableName": "[adf].[WrittenSales]"
+						}
+					}
+				]
+			},
+			{
+				"name": "Get Extract SQL for Written Sales",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Waiting for new data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "select ExtractSQL\nfrom audit.SourceTablesControl\nwhere SourceTablesControlID= 5",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "JBHIFI",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Waiting for new data",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('IsNewData'), 'true')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Get New Data For Written Sales",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SnowflakeSource",
+									"query": "SELECT COUNT(1) AS ISNEWDATA\nFROM SHARE_VNET.SHARE_VNET.V_AU_JB_WRITTEN_SALES \nWHERE WRITTEN_DATE  = CAST(GETDATE() AS DATE)",
+									"exportSettings": {
+										"type": "SnowflakeExportCopyCommand"
+									}
+								},
+								"dataset": {
+									"referenceName": "JBSnowflake",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": true
+							}
+						},
+						{
+							"name": "If exists IsNewData",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Get New Data For Written Sales",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(activity('Get New Data For Written Sales').output.firstRow.ISNEWDATA, 0)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Wait2",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 300
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Good To Go",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "IsNewData",
+											"value": "true"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Unable to fetch data",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get New Data For Written Sales",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "IsNewData",
+								"value": "false"
+							}
+						}
+					],
+					"timeout": "0.03:00:00"
+				}
+			},
+			{
+				"name": "Insert Written Sales",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Load Written Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[etl].[sp__InsertWrittenSales]"
+				},
+				"linkedServiceName": {
+					"referenceName": "JBHIFI",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Rolling Days",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Extract SQL for Written Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "RollingDays",
+					"value": {
+						"value": "@pipeline().parameters.Rollingdays",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Refresh Buyer Model Written Sales",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Insert Written Sales",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RefreshAASModel",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"XMLA": " {\n\"type\": \"full\",\n\"objects\": [\n{\n\"database\": \"JB HiFi Tabular\",\n\"table\": \"WrittenSalesFact\",\n\"partition\": \"SalesFactP18\"\n}\n]\n}\n",
+						"ServerName": "jbinsightsaas01",
+						"ModelName": "JB HiFi Tabular",
+						"ServerRegion": "australiasoutheast"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"IsNewData": {
+				"type": "String",
+				"defaultValue": "false"
+			},
+			"Rollingdays": {
+				"type": "String",
+				"defaultValue": "7"
+			}
+		},
+		"variables": {
+			"IsNewData": {
+				"type": "String",
+				"defaultValue": "false"
+			},
+			"ExtractQuery": {
+				"type": "String"
+			},
+			"RollingDays": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Written Sales"
+		},
+		"annotations": []
+	}
+}

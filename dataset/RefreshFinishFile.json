@@ -1,0 +1,30 @@
+{
+	"name": "RefreshFinishFile",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "jbinsightsstorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"RefreshID": {
+				"type": "int"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@concat(string(dataset().RefreshID), '.log')",
+					"type": "Expression"
+				},
+				"container": "jbhifi-model-logs"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

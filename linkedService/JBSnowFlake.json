@@ -1,0 +1,13 @@
+{
+	"name": "JBSnowFlake",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Snowflake",
+		"typeProperties": {
+			"authenticationType": "Basic",
+			"connectionString": "jdbc:snowflake://jf40260.australia-east.azure.snowflakecomputing.com/?user=svc_vnet_user&db=SHARE_VNET&warehouse=VNET_XSMALL_WH&role=VNET_READER",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQEM0NjUyNUI0LTIyQjctNDA5Mi04NUMzLUFDREY3RTUzNzMwRV9jYmRmZTRjMi04NjU0LTRhZTYtOTBhMS04NTNhY2E3ZDc0MDQiDQp9"
+		}
+	}
+}
